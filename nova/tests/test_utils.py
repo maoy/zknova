@@ -32,6 +32,7 @@ import mox
 import nova
 from nova import exception
 from nova import flags
+from nova import membership
 from nova.openstack.common import timeutils
 from nova import test
 from nova import utils
@@ -41,6 +42,7 @@ FLAGS = flags.FLAGS
 
 
 class ExecuteTestCase(test.TestCase):
+
     def test_retry_on_failure(self):
         fd, tmpfilename = tempfile.mkstemp()
         _, tmpfilename2 = tempfile.mkstemp()
