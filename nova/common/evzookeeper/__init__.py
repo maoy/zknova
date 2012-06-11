@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import os
+import sys
 import functools
 import logging
 import thread
@@ -21,10 +22,23 @@ import eventlet
 import zookeeper
 
 from . import utils
+import nova
+
+from nova import flags
+from nova.openstack.common import cfg
+zk_servers_opt = cfg.StrOpt('zk_servers',
+                            default=None,
+                            help='zookeeper group membership servers.')
+
+FLAGS = flags.FLAGS
+FLAGS.register_opt(zk_servers_opt)
+
 
 ZOO_OPEN_ACL_UNSAFE = {"perms":zookeeper.PERM_ALL, "scheme":"world", "id" :"anyone"}
 
 LOG = logging.getLogger("evzookeeper")
+
+_session = None 
 
 def _generic_completion(spc, *args):
     """The default async completion function
@@ -40,10 +54,30 @@ def _generic_completion(spc, *args):
     ASSOCIATING_STATE, EXPIRED_SESSION_STATE
     """
     spc.set_and_notify(args)
+
+
+
+def get_session(report_interval=5000):
+    """Return a session."""
+    if _session :
+        return _session
+    zkservers = None
+    if(FLAGS.zk_servers):
+        zkservers = str(FLAGS.zk_servers)
+    else:
+        # TODO
+        LOG.debug('no zkserver defined in flags, TODO: throw exception')
+
+    LOG.debug('zkservers defined in flags: ' + str(zkservers))
+    # TODO redirect log to debug
+    return ZKSession(zkservers, recv_timeout=report_interval, zklog_fd=sys.stderr)
+
     
 class ZKSession(object):
     
-    __slots__ = ("_zhandle", "_host", "_recv_timeout", "_ident", "_zklog_fd", "_conn_cbs")
+    __slots__ = ("_zhandle", "_host", "_recv_timeout", "_ident", "_zklog_fd", "_conn_cbs", "_conn_spc", "_conn_watchers")
+    
+    REFRESH_INTERVAL = 10
     
     def __init__(self, host, timeout=None, recv_timeout=10000, ident=(-1, ""), 
                  zklog_fd=None, init_cbs=None):
@@ -60,6 +94,7 @@ class ZKSession(object):
         and then it retries the same IP at every recv_timeout period if only one of 
         ensemble is given. If more than two ensemble IP are given, ZK clients will 
         try next IP immediately.
+        
         @param ident: (clientid, passwd)
         clientid the id of a previously established session that this
         client will be reconnecting to. Clients can access the session id of an 
@@ -68,6 +103,7 @@ class ZKSession(object):
         any reason, the returned zhandle_t will be invalid -- the zhandle_t 
         state will indicate the reason for failure (typically
         EXPIRED_SESSION_STATE).
+        
         @param zklog_fd: the file descriptor to redirect zookeeper logs.
         By default, it redirects to /dev/null
 
@@ -84,6 +120,12 @@ class ZKSession(object):
         if init_cbs:
             self._conn_cbs.update(init_cbs)
         zookeeper.set_log_stream(self._zklog_fd)
+        
+        self._conn_watchers = set([])
+        conn_spc = utils.StatePipeCondition()
+        self.add_connection_callback(conn_spc)
+        self._conn_spc = conn_spc
+
         self.connect(timeout=timeout)
     
     def _init_watcher(self, handle, event_type, state, path):
@@ -553,3 +595,78 @@ class ZKSession(object):
                     zookeeper.SYSTEMERROR: zookeeper.SystemErrorException,
                     zookeeper.UNIMPLEMENTED: zookeeper.UnimplementedException,
                     }
+    
+    def _watch_connection(self):
+        """Runs in a green thread to periodically check connection state,
+        and makes sure that the zknode is in place.
+        """
+        while 1 :
+            watchers = self._conn_watchers.copy()
+            if not len(watchers) :
+                break
+            timeout = False
+            state = None
+            try:
+                _, _, state, _ = self._conn_spc.wait_and_get(timeout=self.REFRESH_INTERVAL)
+            except eventlet.Timeout:
+                timeout = True
+            if timeout:
+                if self.is_connected():
+                    for w in watchers:
+                        try:
+                            w._refresh()
+                        except Exception as ex:
+                            # Ignoring exception 
+                            #LOG.exception(_('Unexpected error raised: %s during _refresh call on %s'), unicode(ex), str(w))
+                            LOG.exception('Unexpected error raised: %s during _refresh call on %s', ex, w)
+                            pass
+            else:
+                if state == zookeeper.CONNECTED_STATE:
+                    for w in watchers:
+                        try:
+                            w._on_connected()
+                        except Exception as ex:
+                            # Ignoring exception
+                            #LOG.exception(_('Unexpected error raised: %s during _on_connected call on %s'), unicode(ex), str(w))
+                            LOG.exception('Unexpected error raised: %s during _on_connected call on %s', ex, w)
+                            pass
+                else:
+                    for w in watchers:
+                        try:
+                            w._on_disconnected(state)
+                        except Exception as ex:
+                            # Ignoring exception 
+                            #LOG.exception(_('Unexpected error raised: %s during _on_connected call on %s'), unicode(ex), str(w))
+                            LOG.exception('Unexpected error raised: %s during _on_connected call on %s', ex, w)
+                            pass
+     
+    
+    def add_connection_watcher(self, watcher):
+        LOG.debug("add_connection_watcher %s", str(watcher))
+        nova.utils.check_isinstance(watcher, ZKSessionWatcher)
+        self._conn_watchers.add(watcher)
+        # the first watcher
+        if len(self._conn_watchers) == 1 :
+            eventlet.spawn(self._watch_connection)
+        if self.is_connected():
+            self._conn_spc.set_and_notify((None, zookeeper.SESSION_EVENT,
+                                    zookeeper.CONNECTED_STATE, ''))
+        
+    def remove_connection_watcher(self, watcher):
+        self._conn_watchers.discard(watcher)
+        LOG.debug("Connection watcher %s was removed, size of connection watchers list is %d", str(watcher), len(self._conn_watchers))
+
+     
+class ZKSessionWatcher(object) :
+    
+    def on_connected(self):
+        """ 
+        Do nothing, will be implemented by subclasses """
+
+    def on_disconnected(self, state):
+        """
+        Do nothing, will be implemented by subclasses """
+        
+    def refresh(self):
+        """ 
+        Do nothing, will be implemented by subclasses """
