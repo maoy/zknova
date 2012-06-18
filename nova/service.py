@@ -39,6 +39,7 @@ from nova import rpc
 from nova import utils
 from nova import version
 from nova import wsgi
+from nova import membership
 
 
 LOG = logging.getLogger(__name__)
@@ -173,6 +174,7 @@ class Service(object):
         super(Service, self).__init__(*args, **kwargs)
         self.saved_args, self.saved_kwargs = args, kwargs
         self.timers = []
+        self.membership_api = membership.API()
 
     def start(self):
         vcs_string = version.version_string_with_vcs()
@@ -190,7 +192,8 @@ class Service(object):
             self.service_id = service_ref['id']
         except exception.NotFound:
             self._create_service_ref(ctxt)
-
+        
+        
         if 'nova-compute' == self.binary:
             self.manager.update_available_resource(ctxt)
 
@@ -211,11 +214,24 @@ class Service(object):
         # Consume from all consumers in a thread
         self.conn.consume_in_thread()
 
-        if self.report_interval:
-            pulse = utils.LoopingCall(self.report_state)
-            pulse.start(interval=self.report_interval,
-                        initial_delay=self.report_interval)
+        LOG.debug(_("Join membership for this service %s") % self.topic)
+        
+        # Add service to the membership group.
+        pulse = self.membership_api.join(ctxt, self.host, self.topic, self.binary, self.report_interval)
+        if pulse:
             self.timers.append(pulse)
+        
+        # Currently only scheduler service needs updates of services state
+        if 'nova-scheduler' == self.binary:
+            self.membership_api.subscribe_to_changes(['compute', 'volume', 'network'])
+
+        # If svcgroup_membership is true the service state is managed
+        # via membership. Set report_interval to 0.
+#        if self.report_interval:
+#            pulse = utils.LoopingCall(self.report_state)
+#            pulse.start(interval=self.report_interval,
+#                        initial_delay=self.report_interval)
+#            self.timers.append(pulse)
 
         if self.periodic_interval:
             if self.periodic_fuzzy_delay:

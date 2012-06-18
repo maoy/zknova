@@ -28,7 +28,8 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
-from nova import utils 
+from nova.utils import check_isinstance 
+
 
 LOG = logging.getLogger(__name__)
 membership_driver_opt = cfg.StrOpt('membership_driver', default='nova.membership.db_driver.DB_Driver',
@@ -47,9 +48,10 @@ class API(object):
         if not cls._driver:
             LOG.debug(_('Membership driver is instance of %s ') %  str(FLAGS.membership_driver))
             cls._driver = importutils.import_object(FLAGS.membership_driver)
-            utils.check_isinstance(cls._driver, MemberShipDriver)
+            check_isinstance(cls._driver, MemberShipDriver)
             # we don't have to check that cls._driver is not NONE, check_isinstance does it
-        return cls._driver
+        return super(API, cls).__new__(cls)
+
 
     def join(self, ctxt, host, group, binary, report_interval):
         """  Add a new member to the membership """
@@ -69,7 +71,7 @@ class API(object):
     def leave(self, context, member_id):
         """ Explicitly remove the given member from the membership monitoring"""
         LOG.debug(_('Explicitly remove the given member [%s] from the membership monitoring' % member_id))
-        return self._driver.leave(context, member_id)
+        return self._driver.leave(member_id['host'], member_id['topic'])
     
 class MemberShipDriver(object):
     """Base class for membership drivers. """
@@ -86,7 +88,7 @@ class MemberShipDriver(object):
         """ Check whether the given member is up. """
         raise NotImplementedError()
     
-    def leave(self, context, member_id):
+    def leave(self, host, group):
         """ Remove the given member from the membership monitoring
         TODO implement in the subclases
         """

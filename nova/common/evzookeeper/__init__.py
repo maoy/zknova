@@ -26,12 +26,35 @@ import nova
 
 from nova import flags
 from nova.openstack.common import cfg
-zk_servers_opt = cfg.StrOpt('zk_servers',
-                            default=None,
-                            help='zookeeper group membership servers.')
+from cgi import log
+from nova.utils import check_isinstance
+
+
+zk_opt = [ 
+    cfg.StrOpt('zk_servers',
+               default=None,
+               help='Comma separated host:port pairs, each corresponding to \
+                     a ZK server. e.g. 127.0.0.1:3000,127.0.0.1:3001'),
+    cfg.StrOpt('zk_log_file',
+               default=None,
+               help='File name to redirect zookeeper logs, "stderr" and \
+                    "stdout" redirect to the standard output and the  \
+                    standard output.'),
+    cfg.IntOpt('zk_conn_refresh',
+               default=10,
+               help='ZKSession refresh interval in sec'),
+    cfg.IntOpt('zk_recv_timeout',
+               default=5000,
+               help='ZK clients detects server failures in 2/3 of \
+                    recv_timeout, and then it retries the same IP at every \
+                    recv_timeout period if only one of ensemble is given. \
+                    If more than two ensemble IP are given, ZK clients will \
+                    try next IP immediately. [msec]')
+    # TODO add other parameters, e.g. permissions
+          ]
 
 FLAGS = flags.FLAGS
-FLAGS.register_opt(zk_servers_opt)
+FLAGS.register_opts(zk_opt)
 
 
 ZOO_OPEN_ACL_UNSAFE = {"perms":zookeeper.PERM_ALL, "scheme":"world", "id" :"anyone"}
@@ -57,30 +80,46 @@ def _generic_completion(spc, *args):
 
 
 
-def get_session(report_interval=5000):
+def get_session(report_interval= None):
     """Return a session."""
     if _session :
         return _session
     zkservers = None
-    if(FLAGS.zk_servers):
-        zkservers = str(FLAGS.zk_servers)
-    else:
+    if FLAGS.zk_servers is None :
         # TODO
         LOG.debug('no zkserver defined in flags, TODO: throw exception')
-
-    LOG.debug('zkservers defined in flags: ' + str(zkservers))
+    
+    _zklog_fd = None
+    if FLAGS.zk_log_file is not None :
+        if FLAGS.zk_log_file == 'stdout' :
+            _zklog_fd = sys.stdout
+        elif FLAGS.zk_log_file == 'stderr' :
+            _zklog_fd = sys.stderr
+        else :
+            try :
+                _zklog_fd = open(FLAGS.zk_log_file, 'a')
+            except IOError as e :
+                # TODO NLS
+                LOG.exception("get_session threw Error %s", e)
+                _zklog_fd = sys.stderr
+    _recv_timeout=report_interval
+    if _recv_timeout is None :
+        _recv_timeout = FLAGS.zk_recv_timeout
+           
+    LOG.debug('Create a new ZK session')
     # TODO redirect log to debug
-    return ZKSession(zkservers, recv_timeout=report_interval, zklog_fd=sys.stderr)
+    return ZKSession(host=FLAGS.zk_servers, recv_timeout=_recv_timeout, 
+                     refresh_interval=FLAGS.zk_conn_refresh,
+                     zklog_fd=_zklog_fd)
 
     
 class ZKSession(object):
     
-    __slots__ = ("_zhandle", "_host", "_recv_timeout", "_ident", "_zklog_fd", "_conn_cbs", "_conn_spc", "_conn_watchers")
-    
-    REFRESH_INTERVAL = 10
-    
-    def __init__(self, host, timeout=None, recv_timeout=10000, ident=(-1, ""), 
-                 zklog_fd=None, init_cbs=None):
+    __slots__ = ("_zhandle", "_host", "_recv_timeout", "_refresh_interval", 
+                 "_ident", "_zklog_fd", "_conn_cbs", "_conn_spc", "_conn_watchers")
+        
+    def __init__(self, host, timeout=None, recv_timeout=10000, refresh_interval=10, 
+                 ident=(-1, ""), zklog_fd=None, init_cbs=None):
         """
         @param host: comma separated host:port pairs, each corresponding to a zk
         server. e.g. '127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002'
@@ -94,6 +133,8 @@ class ZKSession(object):
         and then it retries the same IP at every recv_timeout period if only one of 
         ensemble is given. If more than two ensemble IP are given, ZK clients will 
         try next IP immediately.
+        
+        @param refresh_interval: ZK connection checking interval [sec]
         
         @param ident: (clientid, passwd)
         clientid the id of a previously established session that this
@@ -109,8 +150,14 @@ class ZKSession(object):
 
         @param init_cbs: initial callback objects of type StatePipeCondition
         """
+        LOG.debug("Create a new ZKSession: servers=%s timeout=%s recv_timeout=%s\
+, refresh_interval=%s, ident=%s, zklog_fd=%s, init_cbs=%s", 
+                  host, str(timeout), str(recv_timeout), str(refresh_interval), 
+                  str(ident), str(zklog_fd), str(init_cbs))
+        
         self._host = host
         self._recv_timeout = recv_timeout
+        self._refresh_interval = refresh_interval
         self._ident = ident
         if zklog_fd is None:
             zklog_fd = open("/dev/null")
@@ -607,7 +654,7 @@ class ZKSession(object):
             timeout = False
             state = None
             try:
-                _, _, state, _ = self._conn_spc.wait_and_get(timeout=self.REFRESH_INTERVAL)
+                _, _, state, _ = self._conn_spc.wait_and_get(timeout=self._refresh_interval)
             except eventlet.Timeout:
                 timeout = True
             if timeout:
@@ -617,6 +664,7 @@ class ZKSession(object):
                             w._refresh()
                         except Exception as ex:
                             # Ignoring exception 
+                            # TODO add NLS
                             #LOG.exception(_('Unexpected error raised: %s during _refresh call on %s'), unicode(ex), str(w))
                             LOG.exception('Unexpected error raised: %s during _refresh call on %s', ex, w)
                             pass
@@ -627,6 +675,7 @@ class ZKSession(object):
                             w._on_connected()
                         except Exception as ex:
                             # Ignoring exception
+                            # TODO add NLS
                             #LOG.exception(_('Unexpected error raised: %s during _on_connected call on %s'), unicode(ex), str(w))
                             LOG.exception('Unexpected error raised: %s during _on_connected call on %s', ex, w)
                             pass
@@ -636,6 +685,7 @@ class ZKSession(object):
                             w._on_disconnected(state)
                         except Exception as ex:
                             # Ignoring exception 
+                            # TODO add NLS
                             #LOG.exception(_('Unexpected error raised: %s during _on_connected call on %s'), unicode(ex), str(w))
                             LOG.exception('Unexpected error raised: %s during _on_connected call on %s', ex, w)
                             pass
@@ -643,7 +693,7 @@ class ZKSession(object):
     
     def add_connection_watcher(self, watcher):
         LOG.debug("add_connection_watcher %s", str(watcher))
-        nova.utils.check_isinstance(watcher, ZKSessionWatcher)
+        check_isinstance(watcher, ZKSessionWatcher)
         self._conn_watchers.add(watcher)
         # the first watcher
         if len(self._conn_watchers) == 1 :

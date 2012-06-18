@@ -36,6 +36,7 @@ from nova.openstack.common import jsonutils
 from nova import rpc
 from nova.rpc import common as rpc_common
 from nova import utils
+from nova import membership
 
 
 LOG = logging.getLogger(__name__)
@@ -139,6 +140,7 @@ class Scheduler(object):
                 FLAGS.scheduler_host_manager)
         self.compute_api = compute_api.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
+        self.membership_api = membership.API()
 
     def get_host_list(self):
         """Get a list of hosts from the HostManager."""
@@ -160,7 +162,7 @@ class Scheduler(object):
         services = db.service_get_all_by_topic(context, topic)
         return [service['host']
                 for service in services
-                if utils.service_is_up(service)]
+                if self.membership_api.service_is_up(service)]
 
     def create_instance_db_entry(self, context, request_spec, reservations):
         """Create instance DB entry based on request_spec"""
@@ -263,7 +265,7 @@ class Scheduler(object):
         services = db.service_get_all_compute_by_host(context, src)
 
         # Checking src host is alive.
-        if not utils.service_is_up(services[0]):
+        if not self.membership_api.service_is_up(services[0]):
             raise exception.ComputeServiceUnavailable(host=src)
 
     def _live_migration_dest_check(self, context, instance_ref, dest,
@@ -283,7 +285,7 @@ class Scheduler(object):
         dservice_ref = dservice_refs[0]
 
         # Checking dest host is alive.
-        if not utils.service_is_up(dservice_ref):
+        if not self.membership_api.service_is_up(dservice_ref):
             raise exception.ComputeServiceUnavailable(host=dest)
 
         # Checking whether The host where instance is running

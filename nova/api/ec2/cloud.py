@@ -45,6 +45,7 @@ from nova.openstack.common import importutils
 from nova import quota
 from nova import utils
 from nova import volume
+from nova import membership
 
 
 FLAGS = flags.FLAGS
@@ -194,6 +195,7 @@ class CloudController(object):
                                        volume_api=self.volume_api)
         self.keypair_api = compute.api.KeypairAPI()
         self.sgh = importutils.import_object(FLAGS.security_group_handler)
+        self.membership_api = membership.API()
 
     def __str__(self):
         return 'CloudController'
@@ -252,7 +254,7 @@ class CloudController(object):
             hsvcs = [service for service in services
                      if service['host'] == host]
             for svc in hsvcs:
-                alive = utils.service_is_up(svc)
+                alive = self.membership_api.service_is_up(svc)
                 art = (alive and ":-)") or "XXX"
                 active = 'enabled'
                 if svc['disabled']:

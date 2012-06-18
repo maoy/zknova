@@ -15,7 +15,7 @@
 
 from nova import log as logging
 from nova.scheduler import filters
-from nova import utils
+from nova import membership
 
 
 LOG = logging.getLogger(__name__)
@@ -24,6 +24,9 @@ LOG = logging.getLogger(__name__)
 class ComputeFilter(filters.BaseHostFilter):
     """HostFilter hard-coded to work with InstanceType records."""
 
+    def __init__(self):
+        self.membership_api = membership.API()
+        
     def _satisfies_extra_specs(self, capabilities, instance_type):
         """Check that the capabilities provided by the compute service
         satisfy the extra specs associated with the instance type"""
@@ -46,7 +49,7 @@ class ComputeFilter(filters.BaseHostFilter):
         capabilities = host_state.capabilities
         service = host_state.service
 
-        if not utils.service_is_up(service) or service['disabled']:
+        if not self.membership_api.service_is_up(service) or service['disabled']:
             LOG.debug(_("%(host_state)s is disabled or has not been "
                     "heard from in a while"), locals())
             return False

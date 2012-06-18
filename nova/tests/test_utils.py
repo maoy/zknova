@@ -35,6 +35,7 @@ from nova import exception
 from nova import flags
 from nova import test
 from nova import utils
+from nova import membership
 
 
 FLAGS = flags.FLAGS
@@ -604,13 +605,14 @@ class DeprecationTest(test.TestCase):
 
         self.flags(service_down_time=down_time)
         self.mox.StubOutWithMock(utils, 'utcnow')
+        self.membership_api = membership.API()
 
         # Up (equal)
         utils.utcnow().AndReturn(fts_func(fake_now))
         service = {'updated_at': fts_func(fake_now - down_time),
                    'created_at': fts_func(fake_now - down_time)}
         self.mox.ReplayAll()
-        result = utils.service_is_up(service)
+        result = self.membership_api.service_is_up(service)
         self.assertTrue(result)
 
         self.mox.ResetAll()
@@ -619,7 +621,7 @@ class DeprecationTest(test.TestCase):
         service = {'updated_at': fts_func(fake_now - down_time + 1),
                    'created_at': fts_func(fake_now - down_time + 1)}
         self.mox.ReplayAll()
-        result = utils.service_is_up(service)
+        result = self.membership_api.service_is_up(service)
         self.assertTrue(result)
 
         self.mox.ResetAll()
@@ -628,7 +630,7 @@ class DeprecationTest(test.TestCase):
         service = {'updated_at': fts_func(fake_now - down_time - 1),
                    'created_at': fts_func(fake_now - down_time - 1)}
         self.mox.ReplayAll()
-        result = utils.service_is_up(service)
+        result = self.membership_api.service_is_up(service)
         self.assertFalse(result)
 
     def test_xhtml_escape(self):

@@ -19,12 +19,12 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
-from nova.membership import MemberShipDriver
+from nova.membership import api
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
-class DB_Driver(MemberShipDriver):
+class DB_Driver(api.MemberShipDriver):
     
     def join(self, ctxt, host, group, binary, report_interval):
         """Join the given service with it's group"""        
@@ -36,9 +36,9 @@ class DB_Driver(MemberShipDriver):
                         initial_delay=report_interval)
             return pulse
                 
-#    def subscribe_to_changes(self, groups):
-#        """Subscribe to changes under given groups: no need in the db_backend"""        
-#        return
+    def subscribe_to_changes(self, groups):
+        """Subscribe to changes under given groups: no need in the db_backend"""        
+        return
     
     def is_up(self, service_ref):
         """moved from nova.utils
