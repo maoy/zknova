@@ -26,7 +26,6 @@ import nova
 
 from nova import flags
 from nova.openstack.common import cfg
-from cgi import log
 from nova.utils import check_isinstance
 
 
@@ -61,7 +60,6 @@ ZOO_OPEN_ACL_UNSAFE = {"perms":zookeeper.PERM_ALL, "scheme":"world", "id" :"anyo
 
 LOG = logging.getLogger("evzookeeper")
 
-_session = None 
 
 def _generic_completion(spc, *args):
     """The default async completion function
@@ -78,16 +76,17 @@ def _generic_completion(spc, *args):
     """
     spc.set_and_notify(args)
 
+_session = None
 
-
-def get_session(report_interval= None):
-    """Return a session."""
-    if _session :
+def get_session(report_interval=None):
+    """Return a session.
+    
+    @param report_internal: recv_timeout in zookeeper"""
+    if _session:
         return _session
-    zkservers = None
     if FLAGS.zk_servers is None :
-        # TODO
-        LOG.debug('no zkserver defined in flags, TODO: throw exception')
+        LOG.error('no zk_servers defined in flags')
+        raise RuntimeError("no zk_servers defined")
     
     _zklog_fd = None
     if FLAGS.zk_log_file is not None :
@@ -108,14 +107,16 @@ def get_session(report_interval= None):
            
     LOG.debug('Create a new ZK session')
     # TODO redirect log to debug
-    return ZKSession(host=FLAGS.zk_servers, recv_timeout=_recv_timeout, 
-                     refresh_interval=FLAGS.zk_conn_refresh,
-                     zklog_fd=_zklog_fd)
+    _session = ZKSession(host=FLAGS.zk_servers,
+                         recv_timeout=_recv_timeout, 
+                         refresh_interval=FLAGS.zk_conn_refresh,
+                         zklog_fd=_zklog_fd)
+    return _session
 
     
 class ZKSession(object):
     
-    __slots__ = ("_zhandle", "_host", "_recv_timeout", "_refresh_interval", 
+    __slots__ = ("_zhandle", "_host", "_recv_timeout", "_refresh_interval",
                  "_ident", "_zklog_fd", "_conn_cbs", "_conn_spc", "_conn_watchers")
         
     def __init__(self, host, timeout=None, recv_timeout=10000, refresh_interval=10, 
@@ -706,17 +707,14 @@ class ZKSession(object):
         self._conn_watchers.discard(watcher)
         LOG.debug("Connection watcher %s was removed, size of connection watchers list is %d", str(watcher), len(self._conn_watchers))
 
-     
+
 class ZKSessionWatcher(object) :
-    
+
     def on_connected(self):
-        """ 
-        Do nothing, will be implemented by subclasses """
+        """Do nothing, will be implemented by subclasses"""
 
     def on_disconnected(self, state):
-        """
-        Do nothing, will be implemented by subclasses """
+        """Do nothing, will be implemented by subclasses"""
         
     def refresh(self):
-        """ 
-        Do nothing, will be implemented by subclasses """
+        """Do nothing, will be implemented by subclasses"""
