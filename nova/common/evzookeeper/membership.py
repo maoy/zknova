@@ -21,7 +21,6 @@ import random
 import eventlet
 import zookeeper
 
-from collections import defaultdict
 from nova.common.evzookeeper import utils, ZOO_OPEN_ACL_UNSAFE, ZKSessionWatcher
 
 
@@ -123,9 +122,7 @@ class MembershipMonitor(_BasicMembership):
         except Exception:
             LOG.exception("in MembershipMonitor._get_members")
             return []
- 
 
-    
 
 class Membership(_BasicMembership):
     '''Use ephemeral zknodes to maintain a failure-aware node membership list.
