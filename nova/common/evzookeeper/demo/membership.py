@@ -13,28 +13,29 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import sys
-import logging
-
-logging.basicConfig(level=logging.DEBUG)
-
 import eventlet
 from evzookeeper import recipes
 from evzookeeper import ZKSession
+import logging
+import sys
+
+
+logging.basicConfig(level=logging.DEBUG)
+
 
 class NodeManager(object):
 
     def __init__(self, name):
         self.name = name
-        self._session = ZKSession("localhost:2181", recv_timeout=4000, 
+        self._session = ZKSession("localhost:2181", recv_timeout=4000,
                                   zklog_fd=sys.stderr)
         self.membership = recipes.Membership(self._session, "/basedir", name,
                                              cb_func=self.monitor)
 
     def monitor(self, members):
         print "in monitor thread", self.name, members
-            
-        
+
+
 def demo():
     if len(sys.argv) > 1:
         _nm = NodeManager(sys.argv[1])
@@ -47,6 +48,6 @@ def demo():
         eventlet.sleep(60)
         _nm4 = NodeManager("node4")
         eventlet.sleep(1000)
-    
-if __name__=="__main__":
+
+if __name__ == "__main__":
     demo()

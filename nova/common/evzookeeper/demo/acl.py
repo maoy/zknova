@@ -16,15 +16,15 @@
 
 '''
 '''
+from evzookeeper import ZKSession
+from evzookeeper import ZOO_OPEN_ACL_UNSAFE
 import zookeeper
-from evzookeeper import ZKSession, ZOO_OPEN_ACL_UNSAFE
 
 
 def demo_acl():
     session = ZKSession("localhost:2181", timeout=10)
     print 'connected'
     acl = [{"perms":zookeeper.PERM_ALL, "scheme":"auth", "id":""}]
-    
     session.add_auth("digest", "user:pass")
     session.create("/test-acl", "abc", acl, zookeeper.EPHEMERAL)
     print 'test-acl created'

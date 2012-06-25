@@ -21,17 +21,22 @@ import random
 import eventlet
 import zookeeper
 
-from nova.common.evzookeeper import utils, ZOO_OPEN_ACL_UNSAFE, ZKSessionWatcher
+from collections import defaultdict
+from nova.common.evzookeeper import utils
+from nova.common.evzookeeper import ZKSessionWatcher
+from nova.common.evzookeeper import ZOO_OPEN_ACL_UNSAFE
 
 
 LOG = logging.getLogger(__name__)
+
 
 class _BasicMembership(ZKSessionWatcher):
     """ Base 'abstract' class for MembershipMonitor and Membership classes """
     def __init__(self, session, acl=None):
         """
         @param session: a ZKSession object
-        @param acl: access control list, by default [ZOO_OPEN_ACL_UNSAFE] is used
+        @param acl: access control list, by default [ZOO_OPEN_ACL_UNSAFE] is
+                    used
         """
         self._session = session
         self.acl = acl if acl else [ZOO_OPEN_ACL_UNSAFE]
@@ -40,49 +45,49 @@ class _BasicMembership(ZKSessionWatcher):
     def _on_connected(self):
         LOG.debug("_BasicMembership _on_connected on %s", self._basepath)
         self._refresh()
-    
+
     def _on_disconnected(self, state):
         LOG.error("_BasicMembership _on_disconnected on %s with state %s",
                   self._name, state)
-        if state==zookeeper.EXPIRED_SESSION_STATE:
+        if state == zookeeper.EXPIRED_SESSION_STATE:
             LOG.debug("_BasicMembership session expired. Try reconnect")
             self._session.connect()
-      
+
     def _refresh(self, quiet=True):
         LOG.debug("_BasicMembership _refresh on %s", self._basepath)
 
-  
+
 class MembershipMonitor(_BasicMembership):
     """ Monitors membership services """
-    
+
     def __init__(self, session, basepath, acl=None, cb_func=None):
         """
         @param session: a ZKSession object
         @param basepath: the parent dir for membership zknodes.
-        @param acl: access control list, by default [ZOO_OPEN_ACL_UNSAFE] is used
-        @param cb_func: when the membership changes, cb_func is called 
-        with the new membership list in another green thread 
+        @param acl: access control list, by default [ZOO_OPEN_ACL_UNSAFE] is
+                    used
+        @param cb_func: when the membership changes, cb_func is called
+        with the new membership list in another green thread
         """
         self._basepath = basepath
-        super(MembershipMonitor, self).__init__(session, acl)     
+        super(MembershipMonitor, self).__init__(session, acl)
         self._cb_func = cb_func or (lambda x: None)
         self._members = []
         self._monitor_pc = utils.StatePipeCondition()
         eventlet.spawn(self._watch_membership)
-        
+
     def _safe_callback(self):
         try:
             return self._cb_func(self._members)
         except Exception:
             LOG.exception("ignoring unexpected callback function exception")
 
-    
     def _refresh(self, quiet=True):
         LOG.debug("MembershipMonitor _refresh on %s", self._basepath)
         # if another node has the same name, we'll get an exception
         try:
             # if self._join():
-            self._monitor_pc.set_and_notify((zookeeper.SESSION_EVENT, 
+            self._monitor_pc.set_and_notify((zookeeper.SESSION_EVENT,
                                                 zookeeper.CONNECTED_STATE))
         except Exception:
             # error during creating the node.
@@ -92,13 +97,14 @@ class MembershipMonitor(_BasicMembership):
     def _join(self):
         """ Do nothing , implementation in the subclass """
         LOG.debug("MembershipMonitor _join on %s", self._basepath)
- 
-       
+
     def _watch_membership(self):
         """Runs in a green thread to get all members."""
         while 1:
             event, state = self._monitor_pc.wait_and_get()
-            LOG.debug("MembershipMonitor _watch_membership on %s event= %s state = %s", self._basepath, event, state)
+            LOG.debug("MembershipMonitor _watch_membership on %(path)s \
+event= %(event)s state = %(state)s", {'path': self._basepath,
+                                      'evenet': event, 'state': state})
             if event == zookeeper.SESSION_EVENT and \
                     state != zookeeper.CONNECTED_STATE:
                 # disconnected
@@ -107,12 +113,11 @@ class MembershipMonitor(_BasicMembership):
             else:
                 self._members = self._get_members()
             self._safe_callback()
-    
-                     
+
     def get_all(self):
         """@return: a list of node names from the local cache """
         return self._members
-             
+
     def _get_members(self):
         try:
             def watcher(spc, handle, event, state, path):
@@ -126,80 +131,76 @@ class MembershipMonitor(_BasicMembership):
 
 class Membership(_BasicMembership):
     '''Use ephemeral zknodes to maintain a failure-aware node membership list.
-    
+
     ZooKeeper data structure:
     /basepath = "ZKMembers"
     /basepath/member1 = session_token1
     /basepath/member2 = session_token2
     ...
-    Each member has a ephemeral zknode with value as a randomly generated number
+    Each member has a ephemeral zknode with value as a randomly generated
+    number
     as unique session token.
     '''
-    
+
     def __init__(self, session, basepath, name, acl=None, cb_func=None):
         """Join the membership
-        
+
         @param session: a ZKSession object
         @param basepath: the parent dir for membership zknodes.
         @param name: name of this member
-        @param acl: access control list, by default [ZOO_OPEN_ACL_UNSAFE] is used
-        @param cb_func: when the membership changes, cb_func is called 
-        with the new membership list in another green thread 
+        @param acl: access control list, by default [ZOO_OPEN_ACL_UNSAFE] is
+            used
+        @param cb_func: when the membership changes, cb_func is called
+        with the new membership list in another green thread
         """
         self._name = name
         self._basepath = basepath
-        self._session_token = str(random.random())       
+        self._session_token = str(random.random())
         super(Membership, self).__init__(session, acl)
-        self._joined = False       
+        self._joined = False
         if self._session.is_connected():
             self._refresh()
 
-
-
     def _refresh(self, quiet=True):
-        LOG.debug("Membership _refresh on %s/%s", self._basepath, self._name)
+        LOG.debug("Membership _refresh on %s",
+                  self._basepath + '/' + self._name)
         # if another node has the same name, we'll get an exception
         try:
             self._join()
-                # TODO check it 
-                #self._monitor_pc.set_and_notify((zookeeper.SESSION_EVENT, 
-                #                                zookeeper.CONNECTED_STATE))
         except Exception:
             # error during creating the node.
             if not quiet:
                 raise
 
-
     def _join(self):
         """Make sure the ephemeral node is in ZK, assuming the session
-        is connected. 
-        Called periodically when the session is in connected state or 
+        is connected.
+        Called periodically when the session is in connected state or
         when initially connected
-        
+
         @return: True if the node didn't exist and was created;
-        False if already joined; 
+        False if already joined;
         or raise RuntimeError if another session is occupying
         the node currently.
         """
-        LOG.debug("Membership _join on %s/%s", self._basepath, self._name)
-        if self._joined :
+        path = self._basepath + '/' + self._name
+        LOG.debug("Membership _join on %s", path)
+        if self._joined:
             return False
         # make sure base path exists
         try:
             self._session.create(self._basepath, "ZKMembers", self.acl)
         except zookeeper.NodeExistsException:
             pass
-        
-        path = "%s/%s" % (self._basepath, self._name)
- 
+
         try:
-            self._session.create(path, self._session_token, self.acl, 
+            self._session.create(path, self._session_token, self.acl,
                                  zookeeper.EPHEMERAL)
             LOG.debug("created zknode %s", path)
             if self.joined:
-                LOG.warn("node %s successfully created even after joined. data loss?", 
-                         path)
-            self.joined = True        
+                LOG.warn("node %s successfully created even after joined.\
+data loss?", path)
+            self.joined = True
             return True
         except zookeeper.NodeExistsException:
             (data, _) = self._session.get(path)
@@ -210,7 +211,6 @@ class Membership(_BasicMembership):
             # otherwise, node is already there correctly
         return False
 
-
     def leave(self):
         LOG.debug("Membership leave on %s/%s", self._basepath, self._name)
         if self._name:
@@ -219,4 +219,3 @@ class Membership(_BasicMembership):
             self._name = None
             return True
         return False
-            

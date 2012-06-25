@@ -33,9 +33,9 @@ import mox
 import nova
 from nova import exception
 from nova import flags
+from nova import membership
 from nova import test
 from nova import utils
-from nova import membership
 
 
 FLAGS = flags.FLAGS

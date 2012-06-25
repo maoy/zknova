@@ -14,9 +14,8 @@
 #    under the License.
 
 from nova import log as logging
-from nova.scheduler import filters
 from nova import membership
-
+from nova.scheduler import filters
 
 LOG = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ class ComputeFilter(filters.BaseHostFilter):
 
     def __init__(self):
         self.membership_api = membership.API()
-        
+
     def _satisfies_extra_specs(self, capabilities, instance_type):
         """Check that the capabilities provided by the compute service
         satisfy the extra specs associated with the instance type"""
@@ -49,7 +48,8 @@ class ComputeFilter(filters.BaseHostFilter):
         capabilities = host_state.capabilities
         service = host_state.service
 
-        if not self.membership_api.service_is_up(service) or service['disabled']:
+        if not (self.membership_api.service_is_up(service)
+                or service['disabled']):
             LOG.debug(_("%(host_state)s is disabled or has not been "
                     "heard from in a while"), locals())
             return False

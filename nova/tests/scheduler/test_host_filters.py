@@ -22,13 +22,12 @@ import stubout
 from nova import context
 from nova import exception
 from nova import flags
+from nova import membership
 from nova.scheduler import filters
 from nova.scheduler.filters.trusted_filter import AttestationService
 from nova import test
 from nova.tests.scheduler import fakes
 from nova import utils
-from nova import membership
-
 
 DATA = ''
 

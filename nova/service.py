@@ -33,14 +33,13 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import membership
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova import rpc
 from nova import utils
 from nova import version
 from nova import wsgi
-from nova import membership
-
 
 LOG = logging.getLogger(__name__)
 
@@ -192,8 +191,7 @@ class Service(object):
             self.service_id = service_ref['id']
         except exception.NotFound:
             self._create_service_ref(ctxt)
-        
-        
+
         if 'nova-compute' == self.binary:
             self.manager.update_available_resource(ctxt)
 
@@ -215,15 +213,17 @@ class Service(object):
         self.conn.consume_in_thread()
 
         LOG.debug(_("Join membership for this service %s") % self.topic)
-        
+
         # Add service to the membership group.
-        pulse = self.membership_api.join(ctxt, self.host, self.topic, self.binary, self.report_interval)
+        pulse = self.membership_api.join(ctxt, self.host, self.topic,
+                                         self.binary, self.report_interval)
         if pulse:
             self.timers.append(pulse)
-        
+
         # Currently only scheduler service needs updates of services state
         if 'nova-scheduler' == self.binary:
-            self.membership_api.subscribe_to_changes(['compute', 'volume', 'network'])
+            self.membership_api.subscribe_to_changes(['compute', 'volume',
+                                                      'network'])
 
         # If svcgroup_membership is true the service state is managed
         # via membership. Set report_interval to 0.

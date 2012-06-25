@@ -28,70 +28,80 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
-from nova.utils import check_isinstance 
+from nova.utils import check_isinstance
 
 
 LOG = logging.getLogger(__name__)
-membership_driver_opt = cfg.StrOpt('membership_driver', default='nova.membership.db_driver.DB_Driver',
-                                  help='The driver for membership service.')
+_default_driver = 'nova.membership.db_driver.DB_Driver'
+membership_driver_opt = cfg.StrOpt('membership_driver',
+                                   default=_default_driver,
+                                   help='The driver for membership service.')
 
 FLAGS = flags.FLAGS
 FLAGS.register_opt(membership_driver_opt)
 
 
 class API(object):
-    
+
     _driver = None
-        
+
     def __new__(cls, *args, **kwargs):
-        
+
         if not cls._driver:
-            LOG.debug(_('Membership driver is instance of %s ') %  str(FLAGS.membership_driver))
+            LOG.debug(_('Membership driver is instance of %s '),
+                      str(FLAGS.membership_driver))
             cls._driver = importutils.import_object(FLAGS.membership_driver)
             check_isinstance(cls._driver, MemberShipDriver)
-            # we don't have to check that cls._driver is not NONE, check_isinstance does it
+            # we don't have to check that cls._driver is not NONE,
+            # check_isinstance does it
         return super(API, cls).__new__(cls)
-
 
     def join(self, ctxt, host, group, binary, report_interval):
         """  Add a new member to the membership """
-        LOG.debug(_('Join new membership member %s to the %s group' % (ctxt, group)))
+        LOG.debug(_('Join new membership member %(id)s to the %(gr)s group'),
+                  {'id': host, 'gr': group})
         return self._driver.join(ctxt, host, group, binary, report_interval)
 
     def subscribe_to_changes(self, groups):
         """Subscribing to cache changes"""
-        LOG.debug(_('Subscribing to changes in the %s membership group' % groups))
+        LOG.debug(_('Subscribing to changes in the %s membership groups'),
+                  str(groups))
         return self._driver.subscribe_to_changes(groups)
 
     def service_is_up(self, member_id):
         """ Check if the given member is up"""
-        LOG.debug(_('Check if the given member [%s] is part of the membership, is up' % member_id))
+        LOG.debug(_('Check if the given member [%s] is part of the membership,\
+ is up'), member_id)
         return self._driver.is_up(member_id)
-    
+
     def leave(self, context, member_id):
-        """ Explicitly remove the given member from the membership monitoring"""
-        LOG.debug(_('Explicitly remove the given member [%s] from the membership monitoring' % member_id))
+        """
+        Explicitly remove the given member from the membership monitoring
+        """
+        LOG.debug(_('Explicitly remove the given member [%s] from the \
+ membership monitoring'), member_id)
         return self._driver.leave(member_id['host'], member_id['topic'])
-    
+
+
 class MemberShipDriver(object):
     """Base class for membership drivers. """
-    
+
     def join(self, ctxt, host, group, binary, report_interval):
         """Join the given service with it's group"""
         raise NotImplementedError()
-    
+
     def subscribe_to_changes(self, groups):
-        """Subscribe to changes under given groups: no need in the db_backend"""  
+        """
+        Subscribe to changes under given groups: no need in the db_backend
+        """
         raise NotImplementedError()
-    
+
     def is_up(self, member_id):
         """ Check whether the given member is up. """
         raise NotImplementedError()
-    
+
     def leave(self, host, group):
         """ Remove the given member from the membership monitoring
         TODO implement in the subclases
         """
         raise NotImplementedError()
-    
- 

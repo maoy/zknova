@@ -13,14 +13,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
+from evzookeeper import ZKSession
+from evzookeeper import ZOO_OPEN_ACL_UNSAFE
 import zookeeper
-from evzookeeper import ZKSession, ZOO_OPEN_ACL_UNSAFE
+
 
 def demo():
     session = ZKSession("localhost:2181", timeout=10)
     print 'connected'
-    session.create("/test-tmp", "abc", [ZOO_OPEN_ACL_UNSAFE], zookeeper.EPHEMERAL)
+    session.create("/test-tmp", "abc",
+                   [ZOO_OPEN_ACL_UNSAFE], zookeeper.EPHEMERAL)
     print 'test-tmp created'
     print "(acl,stat)=", session.get_acl("/test-tmp")
     try:

@@ -24,11 +24,10 @@ Simple Scheduler
 from nova import db
 from nova import exception
 from nova import flags
+from nova import membership
 from nova.openstack.common import cfg
 from nova.scheduler import chance
 from nova.scheduler import driver
-from nova import membership
-
 
 simple_scheduler_opts = [
     cfg.IntOpt("max_cores",
@@ -51,10 +50,10 @@ FLAGS.register_opts(simple_scheduler_opts)
 
 class SimpleScheduler(chance.ChanceScheduler):
     """Implements Naive Scheduler that tries to find least loaded host."""
-    
+
     def __init__(self):
         self.membership_api = membership.API()
-        
+
     def _schedule_instance(self, context, instance_opts, *_args, **_kwargs):
         """Picks a host that is up and has the fewest running instances."""
         elevated = context.elevated()
@@ -89,7 +88,8 @@ class SimpleScheduler(chance.ChanceScheduler):
                 instance_cores + instance_opts['vcpus'] > FLAGS.max_cores):
                 msg = _("Not enough allocatable CPU cores remaining")
                 raise exception.NoValidHost(reason=msg)
-            if self.membership_api.service_is_up(service) and not service['disabled']:
+            if (self.membership_api.service_is_up(service) and not
+                service['disabled']):
                 return service['host']
         msg = _("Is the appropriate service running?")
         raise exception.NoValidHost(reason=msg)
@@ -140,7 +140,8 @@ class SimpleScheduler(chance.ChanceScheduler):
             if volume_gigabytes + volume_ref['size'] > FLAGS.max_gigabytes:
                 msg = _("Not enough allocatable volume gigabytes remaining")
                 raise exception.NoValidHost(reason=msg)
-            if self.membership_api.service_is_up(service) and not service['disabled']:
+            if (self.membership_api.service_is_up(service) and not
+                service['disabled']):
                 driver.cast_to_volume_host(context, service['host'],
                         'create_volume', volume_id=volume_id, **_kwargs)
                 return None

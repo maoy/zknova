@@ -22,6 +22,7 @@ from . import utils
 
 LOG = logging.getLogger("evzookeeper.recipes")
 
+
 class ZKQueue(object):
     '''A simple queue model, support concurrent enqueue/dequeue
     '''
@@ -36,7 +37,7 @@ class ZKQueue(object):
 
     def enqueue(self, val):
         '''Concurrently enqueue'''
-        return self._session.create(self.basepath + "/item-", val, 
+        return self._session.create(self.basepath + "/item-", val,
                                     self.acl, zookeeper.SEQUENCE)
 
     def _get_and_delete(self, path):
@@ -52,8 +53,8 @@ class ZKQueue(object):
 
     def dequeue(self, timeout=None):
         '''Concurrently dequeue.
-        
-        blocking for 'timeout' seconds; 
+
+        blocking for 'timeout' seconds;
         if timeout is None, block indefinitely (by default)
         if timeout is 0, equivalent to non-blocking
         '''
@@ -63,7 +64,7 @@ class ZKQueue(object):
         while True:
             pc = utils.PipeCondition()
             children = sorted(self._session.
-                              get_children(self.basepath, 
+                              get_children(self.basepath,
                                            functools.partial(watcher, pc)))
             for child in children:
                 data = self._get_and_delete(self.basepath + "/" + child)

@@ -13,53 +13,51 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 import eventlet
-from nova import test
 from nova import flags
+from nova import membership
 from nova.openstack.common import cfg
-from nova import membership 
+from nova import test
 
 FLAGS = flags.FLAGS
 
 
-
 class ZKMembershipTestCase(test.TestCase):
- 
+
     def setUp(self):
         super(ZKMembershipTestCase, self).setUp()
-        self.flags(membership_driver = 'nova.membership.zk_driver.ZK_Driver')
+        self.flags(membership_driver='nova.membership.zk_driver.ZK_Driver')
         FLAGS.zk_servers = 'localhost:2181'
         FLAGS.zk_log_file = './zk.log'
         FLAGS.zk_conn_refresh = 15
         FLAGS.zk_recv_timeout = 6000
-        self.membership_api = membership.API()      
-        
+        self.membership_api = membership.API()
+
     def testJOIN_is_up(self):
-        service_id = {'topic' :'unittest', 'host' :'serviceA'}
-        self.membership_api.join(None, service_id['host'], service_id['topic'], None, None)
+        service_id = {'topic': 'unittest', 'host': 'serviceA'}
+        self.membership_api.join(None, service_id['host'],
+                                 service_id['topic'], None, None)
         eventlet.sleep(5)
         self.assertTrue(self.membership_api.service_is_up(service_id))
         self.membership_api.leave(None, service_id)
         eventlet.sleep(5)
         self.assertFalse(self.membership_api.service_is_up(service_id))
-     
 
     def testSubscribeToChanges(self):
         self.membership_api.subscribe_to_changes(['unittest'])
         eventlet.sleep(5)
-        service_id = {'topic' :'unittest', 'host' :'serviceA'}
-        self.membership_api.join(None, service_id['host'], service_id['topic'], None, None)
+        service_id = {'topic': 'unittest', 'host': 'serviceA'}
+        self.membership_api.join(None, service_id['host'],
+                                 service_id['topic'], None, None)
         eventlet.sleep(5)
         self.assertTrue(self.membership_api.service_is_up(service_id))
 
     def testStop(self):
-        service_id = {'topic' :'unittest', 'host' :'serviceA'}
-        pulse = self.membership_api.join(None, service_id['host'], service_id['topic'], None, None)
+        service_id = {'topic': 'unittest', 'host': 'serviceA'}
+        pulse = self.membership_api.join(None, service_id['host'],
+                                         service_id['topic'], None, None)
         eventlet.sleep(5)
         self.assertTrue(self.membership_api.service_is_up(service_id))
         pulse.stop()
         eventlet.sleep(5)
         self.assertFalse(self.membership_api.service_is_up(service_id))
-
- 

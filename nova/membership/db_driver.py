@@ -18,28 +18,35 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import utils
 from nova.membership import api
+from nova import utils
+
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
+
 class DB_Driver(api.MemberShipDriver):
-    
+
     def join(self, ctxt, host, group, binary, report_interval):
-        """Join the given service with it's group"""        
-        LOG.debug(_('Join new membership member %s to the %s group based on DB' % (ctxt, group)))
+        """Join the given service with it's group"""
+        LOG.debug(_('DB_Driver: join new membership member %(id)s to the \
+%(gr)s group report_interval = %(ri)d'),
+                  {'id': host, 'gr': group, 'ri': report_interval})
         print 'IN MEMBERSHIP_DB_JOIN'
         if report_interval:
-            pulse = utils.LoopingCall(self._report_state, ctxt, host, binary, group)
+            pulse = utils.LoopingCall(self._report_state, ctxt,
+                                      host, binary, group)
             pulse.start(interval=report_interval,
                         initial_delay=report_interval)
             return pulse
-                
+
     def subscribe_to_changes(self, groups):
-        """Subscribe to changes under given groups: no need in the db_backend"""        
+        """
+        Subscribe to changes under given groups: no need in the db_backend
+        """
         return
-    
+
     def is_up(self, service_ref):
         """moved from nova.utils
             Check whether a service is up based on last heartbeat.
@@ -47,10 +54,9 @@ class DB_Driver(api.MemberShipDriver):
         last_heartbeat = service_ref['updated_at'] or service_ref['created_at']
         # Timestamps in DB are UTC.
         elapsed = utils.total_seconds(utils.utcnow() - last_heartbeat)
-        # TODO put the FLAGS.service_down_time in the class
         return abs(elapsed) <= FLAGS.service_down_time
-    
-    # TODO check the next 2 methods
+
+    #TODO(roytman) check the next 2 methods
     def _report_state(self, ctxt, host, binary, group):
         """Update the state of this service in the datastore."""
         zone = FLAGS.node_availability_zone
@@ -59,10 +65,9 @@ class DB_Driver(api.MemberShipDriver):
         state_catalog['report_count'] = service_ref['report_count'] + 1
         if zone != service_ref['availability_zone']:
             state_catalog['availability_zone'] = zone
-    
+
         db.service_update(ctxt, service_ref['id'], state_catalog)
-    
-      
+
     def _get_service_ref(self, context, host, binary, topic):
         """"""
         try:
@@ -77,5 +82,5 @@ class DB_Driver(api.MemberShipDriver):
                                          'topic': topic,
                                          'report_count': 0,
                                          'availability_zone': zone})
-        
+
         return service_ref
