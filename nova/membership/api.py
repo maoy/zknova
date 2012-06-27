@@ -56,11 +56,19 @@ class API(object):
             # check_isinstance does it
         return super(API, cls).__new__(cls)
 
-    def join(self, ctxt, host, group, binary, report_interval):
-        """  Add a new member to the membership """
-        LOG.debug(_('Join new membership member %(id)s to the %(gr)s group'),
-                  {'id': host, 'gr': group})
-        return self._driver.join(ctxt, host, group, binary, report_interval)
+    def join(self, member_id, group, service=None):
+        """
+        Add a new member to the membership
+
+        @param member_id: the joined member ID
+        @param group: the group name, of the joined member
+        @param service: the optional parameter for ZK driver and mandatory for
+        DB driver, this parameter can be used for notifications about
+        disconnect mode and update some internals
+        """
+        LOG.debug(_('Join new membership member %(id)s to the %(gr)s group,\
+service = %(sr)s'), {'id': member_id, 'gr': group, 'sr': service})
+        return self._driver.join(member_id, group, service)
 
     def subscribe_to_changes(self, groups):
         """Subscribing to cache changes"""
@@ -86,7 +94,7 @@ class API(object):
 class MemberShipDriver(object):
     """Base class for membership drivers. """
 
-    def join(self, ctxt, host, group, binary, report_interval):
+    def join(self, member_id, group, service=None):
         """Join the given service with it's group"""
         raise NotImplementedError()
 

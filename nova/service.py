@@ -215,8 +215,7 @@ class Service(object):
         LOG.debug(_("Join membership for this service %s") % self.topic)
 
         # Add service to the membership group.
-        pulse = self.membership_api.join(ctxt, self.host, self.topic,
-                                         self.binary, self.report_interval)
+        pulse = self.membership_api.join(self.host, self.topic, self)
         if pulse:
             self.timers.append(pulse)
 

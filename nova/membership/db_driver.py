@@ -21,22 +21,23 @@ from nova import log as logging
 from nova.membership import api
 from nova import utils
 
-
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
 
 class DB_Driver(api.MemberShipDriver):
 
-    def join(self, ctxt, host, group, binary, report_interval):
+    def join(self, member_id, group, service=None):
         """Join the given service with it's group"""
         LOG.debug(_('DB_Driver: join new membership member %(id)s to the \
-%(gr)s group report_interval = %(ri)d'),
-                  {'id': host, 'gr': group, 'ri': report_interval})
-        print 'IN MEMBERSHIP_DB_JOIN'
+%(gr)s group, service= %(sr)s'),
+                  {'id': member_id, 'gr': group, 'sr': str(service)})
+        if service is None:
+            raise RuntimeError(_('service is a mandatory argument for DB based\
+membership driver'))
+        report_interval = service.report_interval
         if report_interval:
-            pulse = utils.LoopingCall(self._report_state, ctxt,
-                                      host, binary, group)
+            pulse = utils.LoopingCall(self._report_state, service)
             pulse.start(interval=report_interval,
                         initial_delay=report_interval)
             return pulse
@@ -54,33 +55,9 @@ class DB_Driver(api.MemberShipDriver):
         last_heartbeat = service_ref['updated_at'] or service_ref['created_at']
         # Timestamps in DB are UTC.
         elapsed = utils.total_seconds(utils.utcnow() - last_heartbeat)
+        LOG.debug('DB_Driver.is_up last_heartbeat = %(lhb)s elapsed = %(el)s',
+                  {'lhb': str(last_heartbeat), 'el': str(elapsed)})
         return abs(elapsed) <= FLAGS.service_down_time
 
-    #TODO(roytman) check the next 2 methods
-    def _report_state(self, ctxt, host, binary, group):
-        """Update the state of this service in the datastore."""
-        zone = FLAGS.node_availability_zone
-        state_catalog = {}
-        service_ref = self._get_service_ref(ctxt, host, binary, group)
-        state_catalog['report_count'] = service_ref['report_count'] + 1
-        if zone != service_ref['availability_zone']:
-            state_catalog['availability_zone'] = zone
-
-        db.service_update(ctxt, service_ref['id'], state_catalog)
-
-    def _get_service_ref(self, context, host, binary, topic):
-        """"""
-        try:
-            service_ref = db.service_get_by_args(context,
-                                                 host,
-                                                 binary)
-        except exception.NotFound:
-            zone = FLAGS.node_availability_zone
-            service_ref = db.service_create(context,
-                                        {'host': host,
-                                         'binary': binary,
-                                         'topic': topic,
-                                         'report_count': 0,
-                                         'availability_zone': zone})
-
-        return service_ref
+    def _report_state(self, service):
+        service.report_state()

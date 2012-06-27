@@ -35,8 +35,9 @@ class ZKMembershipTestCase(test.TestCase):
 
     def testJOIN_is_up(self):
         service_id = {'topic': 'unittest', 'host': 'serviceA'}
-        self.membership_api.join(None, service_id['host'],
-                                 service_id['topic'], None, None)
+        print 'a'
+        self.membership_api.join(service_id['host'],
+                                 service_id['topic'], None)
         eventlet.sleep(5)
         self.assertTrue(self.membership_api.service_is_up(service_id))
         self.membership_api.leave(None, service_id)
@@ -47,15 +48,15 @@ class ZKMembershipTestCase(test.TestCase):
         self.membership_api.subscribe_to_changes(['unittest'])
         eventlet.sleep(5)
         service_id = {'topic': 'unittest', 'host': 'serviceA'}
-        self.membership_api.join(None, service_id['host'],
-                                 service_id['topic'], None, None)
+        self.membership_api.join(service_id['host'],
+                                 service_id['topic'], None)
         eventlet.sleep(5)
         self.assertTrue(self.membership_api.service_is_up(service_id))
 
     def testStop(self):
         service_id = {'topic': 'unittest', 'host': 'serviceA'}
-        pulse = self.membership_api.join(None, service_id['host'],
-                                         service_id['topic'], None, None)
+        pulse = self.membership_api.join(service_id['host'],
+                                         service_id['topic'], None)
         eventlet.sleep(5)
         self.assertTrue(self.membership_api.service_is_up(service_id))
         pulse.stop()

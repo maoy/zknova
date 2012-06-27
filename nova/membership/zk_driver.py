@@ -29,18 +29,19 @@ class ZK_Driver(api.MemberShipDriver):
     _memberships = {}
     _monitors = {}
 
-    def join(self, ctxt, host, group, binary, report_interval):
+    def join(self, member_id, group, service=None):
         """Join the given service with it's group"""
         LOG.debug(_('ZK_Driver: join new membership member %(id)s to the \
-%(gr)s group report_interval = %(ri)d'),
-                  {'id': host, 'gr': group, 'ri': report_interval})
+%(gr)s group, service= %(sr)s'),
+                  {'id': member_id, 'gr': group, 'sr': str(service)})
         if not group.startswith('/'):
             group = '/' + group
-        ms = membership.Membership(get_session(report_interval), group, host)
-        self._memberships[group + '/' + host] = ms
+        ms = membership.Membership(get_session(), group, member_id)
+        self._memberships[group + '/' + member_id] = ms
         LOG.debug('exit ZK_Driver.api.join. Membership: %s' +
                   str(self._memberships))
-        return FakeLoopingCall(self, host, group)
+        #TODO(roytman) add notification about disconnect mode
+        return FakeLoopingCall(self, member_id, group)
 
     def subscribe_to_changes(self, groups):
         LOG.debug('ZK_Driver.subscribe_to_changes on groups %s ', str(groups))
@@ -50,6 +51,7 @@ class ZK_Driver(api.MemberShipDriver):
             self._monitors[group] = membership.MembershipMonitor(sesion, group)
         LOG.debug('exit ZK_Driver.subscribe_to_changes on groups Monitors: %s',
                    str(self._monitors))
+        #TODO(roytman) add notification about disconnect mode
 
     def leave(self, host, group):
         """ Remove the given member from the membership monitoring

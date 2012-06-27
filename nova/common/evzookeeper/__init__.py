@@ -80,10 +80,8 @@ def _generic_completion(spc, *args):
     spc.set_and_notify(args)
 
 
-def get_session(report_interval=None):
-    """Return a session.
-    @param report_internal: recv_timeout in zookeeper
-    """
+def get_session():
+    """Return a session."""
     global _session
     if _session:
         return _session
@@ -104,9 +102,7 @@ def get_session(report_interval=None):
                 # TODO(roytman) add NLS
                 LOG.exception("get_session threw Error %s", e)
                 _zklog_fd = sys.stderr
-    _recv_timeout = report_interval
-    if _recv_timeout is None:
-        _recv_timeout = FLAGS.zk_recv_timeout
+    _recv_timeout = FLAGS.zk_recv_timeout
 
     LOG.debug('Create a new ZK session')
     _session = ZKSession(host=FLAGS.zk_servers,
