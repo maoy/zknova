@@ -24,6 +24,8 @@ FLAGS = flags.FLAGS
 
 class ZKMembershipTestCase(test.TestCase):
 
+    _zk_installed = False
+
     def setUp(self):
         super(ZKMembershipTestCase, self).setUp()
         self.flags(membership_driver='nova.membership.zk_driver.ZK_Driver')
@@ -33,6 +35,7 @@ class ZKMembershipTestCase(test.TestCase):
         FLAGS.zk_recv_timeout = 6000
         self.membership_api = membership.API()
 
+    @test.skip_unless(_zk_installed, 'Zookeeper is not supported')
     def testJOIN_is_up(self):
         service_id = {'topic': 'unittest', 'host': 'serviceA'}
         print 'a'
@@ -44,6 +47,7 @@ class ZKMembershipTestCase(test.TestCase):
         eventlet.sleep(5)
         self.assertFalse(self.membership_api.service_is_up(service_id))
 
+    @test.skip_unless(_zk_installed, 'Zookeeper is not supported')
     def testSubscribeToChanges(self):
         self.membership_api.subscribe_to_changes(['unittest'])
         eventlet.sleep(5)
@@ -53,6 +57,7 @@ class ZKMembershipTestCase(test.TestCase):
         eventlet.sleep(5)
         self.assertTrue(self.membership_api.service_is_up(service_id))
 
+    @test.skip_unless(_zk_installed, 'Zookeeper is not supported')
     def testStop(self):
         service_id = {'topic': 'unittest', 'host': 'serviceA'}
         pulse = self.membership_api.join(service_id['host'],
