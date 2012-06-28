@@ -678,34 +678,33 @@ handle=%s", self._zhandle)
                 if self.is_connected():
                     for w in watchers:
                         try:
-                            w._refresh()
-                        except Exception as ex:
+                            w.refresh()
+                        except Exception:
                             # Ignoring exception
                             # TODO(roytman) add NLS
-                            LOG.exception('Unexpected error raised: %s \
-during _refresh call on %s', ex, w)
-                            pass
+                            LOG.exception("Unexpected error during "
+                                          "refresh() on %s", w)
             else:
                 if state == zookeeper.CONNECTED_STATE:
                     for w in watchers:
                         try:
-                            w._on_connected()
-                        except Exception as ex:
+                            w.on_connected()
+                        except Exception:
                             # Ignoring exception
                             # TODO(roytman) add NLS
-                            LOG.exception('Unexpected error raised: %s \
-during _on_connected call on %s', ex, w)
-                            pass
+                            LOG.exception('Unexpected error during '
+                                          'on_connected() on %s', w)
                 else:
                     for w in watchers:
                         try:
-                            w._on_disconnected(state)
+                            w.on_disconnected(state)
                         except Exception as ex:
                             # Ignoring exception
                             # TODO(roytman) add NLS
-                            LOG.exception('Unexpected error raised: %s \
-during _on_connected call on %s', ex, w)
-                            pass
+                            # Ignoring exception
+                            # TODO(roytman) add NLS
+                            LOG.exception('Unexpected error during '
+                                          'on_disconnected() on %s', w)
 
     def add_connection_watcher(self, watcher):
         LOG.debug("add_connection_watcher %s", str(watcher))
@@ -728,9 +727,12 @@ class ZKSessionWatcher(object):
 
     def on_connected(self):
         """Do nothing, will be implemented by subclasses"""
+        raise NotImplementedError()
 
     def on_disconnected(self, state):
         """Do nothing, will be implemented by subclasses"""
+        raise NotImplementedError()
 
     def refresh(self):
         """Do nothing, will be implemented by subclasses"""
+        raise NotImplementedError()
