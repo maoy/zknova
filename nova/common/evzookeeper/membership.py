@@ -21,7 +21,6 @@ import random
 import eventlet
 import zookeeper
 
-from collections import defaultdict
 from nova.common.evzookeeper import utils
 from nova.common.evzookeeper import ZKSessionWatcher
 from nova.common.evzookeeper import ZOO_OPEN_ACL_UNSAFE
@@ -31,14 +30,17 @@ LOG = logging.getLogger(__name__)
 
 
 class _BasicMembership(ZKSessionWatcher):
-    """ Base 'abstract' class for MembershipMonitor and Membership classes """
-    def __init__(self, session, acl=None):
+    """Base 'abstract' class for MembershipMonitor and Membership classes"""
+
+    def __init__(self, session, basepath, acl=None):
         """
         @param session: a ZKSession object
+        @param basepath: the parent dir for membership zknodes.
         @param acl: access control list, by default [ZOO_OPEN_ACL_UNSAFE] is
-                    used
+        used
         """
         self._session = session
+        self._basepath = basepath
         self.acl = acl if acl else [ZOO_OPEN_ACL_UNSAFE]
         self._session.add_connection_watcher(self)
 
@@ -58,7 +60,7 @@ class _BasicMembership(ZKSessionWatcher):
 
 
 class MembershipMonitor(_BasicMembership):
-    """ Monitors membership services """
+    """Monitor membership services"""
 
     def __init__(self, session, basepath, acl=None, cb_func=None):
         """
@@ -69,8 +71,7 @@ class MembershipMonitor(_BasicMembership):
         @param cb_func: when the membership changes, cb_func is called
         with the new membership list in another green thread
         """
-        self._basepath = basepath
-        super(MembershipMonitor, self).__init__(session, acl)
+        super(MembershipMonitor, self).__init__(session, basepath, acl)
         self._cb_func = cb_func or (lambda x: None)
         self._members = []
         self._monitor_pc = utils.StatePipeCondition()
@@ -154,9 +155,8 @@ class Membership(_BasicMembership):
         with the new membership list in another green thread
         """
         self._name = name
-        self._basepath = basepath
         self._session_token = str(random.random())
-        super(Membership, self).__init__(session, acl)
+        super(Membership, self).__init__(session, basepath, acl)
         self._joined = False
         if self._session.is_connected():
             self._refresh()
