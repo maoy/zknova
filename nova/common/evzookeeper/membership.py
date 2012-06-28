@@ -21,7 +21,6 @@ import random
 import eventlet
 import zookeeper
 
-from collections import defaultdict
 from nova.common.evzookeeper import utils
 from nova.common.evzookeeper import ZKSessionWatcher
 from nova.common.evzookeeper import ZOO_OPEN_ACL_UNSAFE
@@ -31,34 +30,37 @@ LOG = logging.getLogger(__name__)
 
 
 class _BasicMembership(ZKSessionWatcher):
-    """ Base 'abstract' class for MembershipMonitor and Membership classes """
-    def __init__(self, session, acl=None):
+    """Base 'abstract' class for MembershipMonitor and Membership classes"""
+
+    def __init__(self, session, basepath, acl=None):
         """
         @param session: a ZKSession object
+        @param basepath: the parent dir for membership zknodes.
         @param acl: access control list, by default [ZOO_OPEN_ACL_UNSAFE] is
-                    used
+        used
         """
         self._session = session
+        self._basepath = basepath
         self.acl = acl if acl else [ZOO_OPEN_ACL_UNSAFE]
         self._session.add_connection_watcher(self)
 
-    def _on_connected(self):
+    def on_connected(self):
         LOG.debug("_BasicMembership _on_connected on %s", self._basepath)
         self._refresh()
 
-    def _on_disconnected(self, state):
+    def on_disconnected(self, state):
         LOG.error("_BasicMembership _on_disconnected on %s with state %s",
                   self._name, state)
         if state == zookeeper.EXPIRED_SESSION_STATE:
             LOG.debug("_BasicMembership session expired. Try reconnect")
             self._session.connect()
 
-    def _refresh(self, quiet=True):
+    def refresh(self, quiet=True):
         LOG.debug("_BasicMembership _refresh on %s", self._basepath)
 
 
 class MembershipMonitor(_BasicMembership):
-    """ Monitors membership services """
+    """Monitor membership services"""
 
     def __init__(self, session, basepath, acl=None, cb_func=None):
         """
@@ -69,8 +71,7 @@ class MembershipMonitor(_BasicMembership):
         @param cb_func: when the membership changes, cb_func is called
         with the new membership list in another green thread
         """
-        self._basepath = basepath
-        super(MembershipMonitor, self).__init__(session, acl)
+        super(MembershipMonitor, self).__init__(session, basepath, acl)
         self._cb_func = cb_func or (lambda x: None)
         self._members = []
         self._monitor_pc = utils.StatePipeCondition()
@@ -95,16 +96,17 @@ class MembershipMonitor(_BasicMembership):
                 raise
 
     def _join(self):
-        """ Do nothing , implementation in the subclass """
+        """ Do nothing , implementation in the subclass"""
         LOG.debug("MembershipMonitor _join on %s", self._basepath)
 
     def _watch_membership(self):
         """Runs in a green thread to get all members."""
         while 1:
             event, state = self._monitor_pc.wait_and_get()
-            LOG.debug("MembershipMonitor _watch_membership on %(path)s \
-event= %(event)s state = %(state)s", {'path': self._basepath,
-                                      'evenet': event, 'state': state})
+            LOG.debug("MembershipMonitor _watch_membership on %(path)s "
+                      "event= %(event)s state = %(state)s",
+                      {'path': self._basepath,
+                       'event': event, 'state': state})
             if event == zookeeper.SESSION_EVENT and \
                     state != zookeeper.CONNECTED_STATE:
                 # disconnected
@@ -115,7 +117,7 @@ event= %(event)s state = %(state)s", {'path': self._basepath,
             self._safe_callback()
 
     def get_all(self):
-        """@return: a list of node names from the local cache """
+        """@return: a list of node names from the local cache"""
         return self._members
 
     def _get_members(self):
@@ -138,11 +140,13 @@ class Membership(_BasicMembership):
     /basepath/member2 = session_token2
     ...
     Each member has a ephemeral zknode with value as a randomly generated
-    number
-    as unique session token.
+    number as unique session token.
+    
+    The member is joined by default, and can leave later. After it is left,
+    it is not allowed to re-join.
     '''
 
-    def __init__(self, session, basepath, name, acl=None, cb_func=None):
+    def __init__(self, session, basepath, name, acl=None):
         """Join the membership
 
         @param session: a ZKSession object
@@ -150,13 +154,10 @@ class Membership(_BasicMembership):
         @param name: name of this member
         @param acl: access control list, by default [ZOO_OPEN_ACL_UNSAFE] is
             used
-        @param cb_func: when the membership changes, cb_func is called
-        with the new membership list in another green thread
         """
         self._name = name
-        self._basepath = basepath
         self._session_token = str(random.random())
-        super(Membership, self).__init__(session, acl)
+        super(Membership, self).__init__(session, basepath, acl)
         self._joined = False
         if self._session.is_connected():
             self._refresh()
