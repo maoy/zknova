@@ -727,13 +727,10 @@ watchers list is %(l)d", {'w': str(watcher), 'l': len(self._conn_watchers)})
 class ZKSessionWatcher(object):
 
     def on_connected(self):
-        """
-        Do nothing, will be implemented by subclasses """
+        """Do nothing, will be implemented by subclasses"""
 
     def on_disconnected(self, state):
-        """
-        Do nothing, will be implemented by subclasses """
+        """Do nothing, will be implemented by subclasses"""
 
     def refresh(self):
-        """
-        Do nothing, will be implemented by subclasses """
+        """Do nothing, will be implemented by subclasses"""
