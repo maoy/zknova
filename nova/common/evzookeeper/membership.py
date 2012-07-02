@@ -141,7 +141,7 @@ class Membership(_BasicMembership):
     ...
     Each member has a ephemeral zknode with value as a randomly generated
     number as unique session token.
-    
+
     The member is joined by default, and can leave later. After it is left,
     it is not allowed to re-join.
     '''

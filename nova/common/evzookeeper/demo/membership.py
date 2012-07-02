@@ -14,10 +14,12 @@
 #    under the License.
 
 import eventlet
-from evzookeeper import recipes
-from evzookeeper import ZKSession
 import logging
 import sys
+
+from nova.common import evzookeeper
+from nova.common.evzookeeper import membership
+from nova.common.evzookeeper import ZKSession
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -29,11 +31,14 @@ class NodeManager(object):
         self.name = name
         self._session = ZKSession("localhost:2181", recv_timeout=4000,
                                   zklog_fd=sys.stderr)
-        self.membership = recipes.Membership(self._session, "/basedir", name,
-                                             cb_func=self.monitor)
+        self.membership = membership.Membership(self._session,
+                                                "/basedir", name)
+        self.mon = membership.MembershipMonitor(self._session,
+                                                "/basedir",
+                                                cb_func=self.monitor)
 
     def monitor(self, members):
-        print "in monitor thread", self.name, members
+        print "in monitoring thread", self.name, members
 
 
 def demo():

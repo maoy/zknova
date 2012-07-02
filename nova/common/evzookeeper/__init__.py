@@ -21,9 +21,8 @@ import thread
 import eventlet
 import zookeeper
 
-from . import utils
 import nova
-
+from nova.common.evzookeeper import utils
 from nova import flags
 from nova.openstack.common import cfg
 from nova.utils import check_isinstance
