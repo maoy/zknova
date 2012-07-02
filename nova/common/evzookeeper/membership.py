@@ -49,8 +49,8 @@ class _BasicMembership(ZKSessionWatcher):
         self._refresh()
 
     def on_disconnected(self, state):
-        LOG.error("_BasicMembership _on_disconnected on %s with state %s",
-                  self._name, state)
+        LOG.error("_BasicMembership _on_disconnected on with state %s",
+                  state)
         if state == zookeeper.EXPIRED_SESSION_STATE:
             LOG.debug("_BasicMembership session expired. Try reconnect")
             self._session.connect()
@@ -69,11 +69,14 @@ class MembershipMonitor(_BasicMembership):
         @param acl: access control list, by default [ZOO_OPEN_ACL_UNSAFE] is
                     used
         @param cb_func: when the membership changes, cb_func is called
-        with the new membership list in another green thread
+        with the new membership list in another green thread.
+        If the ZooKeeper quorum is (temporarily) unavailable, None
+        is returned in the call back. It does NOT mean that the members
+        have all left.
         """
         super(MembershipMonitor, self).__init__(session, basepath, acl)
         self._cb_func = cb_func or (lambda x: None)
-        self._members = []
+        self._members = None
         self._monitor_pc = utils.StatePipeCondition()
         eventlet.spawn(self._watch_membership)
 
@@ -95,10 +98,6 @@ class MembershipMonitor(_BasicMembership):
             if not quiet:
                 raise
 
-    def _join(self):
-        """ Do nothing , implementation in the subclass"""
-        LOG.debug("MembershipMonitor _join on %s", self._basepath)
-
     def _watch_membership(self):
         """Runs in a green thread to get all members."""
         while 1:
@@ -110,8 +109,7 @@ class MembershipMonitor(_BasicMembership):
             if event == zookeeper.SESSION_EVENT and \
                     state != zookeeper.CONNECTED_STATE:
                 # disconnected
-                self.joined = False
-                self._members = []
+                self._members = None
             else:
                 self._members = self._get_members()
             self._safe_callback()
@@ -128,7 +126,7 @@ class MembershipMonitor(_BasicMembership):
             return self._session.get_children(self._basepath, callback)
         except Exception:
             LOG.exception("in MembershipMonitor._get_members")
-            return []
+            return None
 
 
 class Membership(_BasicMembership):
