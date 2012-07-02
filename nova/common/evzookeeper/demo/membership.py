@@ -27,31 +27,34 @@ logging.basicConfig(level=logging.DEBUG)
 
 class NodeManager(object):
 
-    def __init__(self, name):
+    def __init__(self, name, session):
         self.name = name
-        self._session = ZKSession("localhost:2181", recv_timeout=4000,
-                                  zklog_fd=sys.stderr)
-        self.membership = membership.Membership(self._session,
+        self.membership = membership.Membership(session,
                                                 "/basedir", name)
-        self.mon = membership.MembershipMonitor(self._session,
+class NodeMonitor(object):
+    def __init__(self, session):
+        self.mon = membership.MembershipMonitor(session,
                                                 "/basedir",
                                                 cb_func=self.monitor)
 
     def monitor(self, members):
-        print "in monitoring thread", self.name, members
+        print "in monitoring thread", members
 
 
 def demo():
+    session = ZKSession("localhost:2181", recv_timeout=4000,
+                        zklog_fd=sys.stderr)
+    _n = NodeMonitor(session)
     if len(sys.argv) > 1:
-        _nm = NodeManager(sys.argv[1])
+        _nm = NodeManager(sys.argv[1], session)
         eventlet.sleep(1000)
     else:
-        _nm1 = NodeManager("node1")
-        _nm2 = NodeManager("node2")
+        _nm1 = NodeManager("node1", session)
+        _nm2 = NodeManager("node2", session)
         eventlet.sleep(5)
-        _nm3 = NodeManager("node3")
+        _nm3 = NodeManager("node3", session)
         eventlet.sleep(60)
-        _nm4 = NodeManager("node4")
+        _nm4 = NodeManager("node4", session)
         eventlet.sleep(1000)
 
 if __name__ == "__main__":
