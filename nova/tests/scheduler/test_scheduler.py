@@ -367,14 +367,16 @@ class SchedulerTestCase(test.TestCase):
         service1 = {'host': 'host1'}
         service2 = {'host': 'host2'}
         services = [service1, service2]
-
+        mapi = membership.API()
+        
         self.mox.StubOutWithMock(db, 'service_get_all_by_topic')
-        self.mox.StubOutWithMock(membership, 'service_is_up')
+        
+        self.mox.StubOutWithMock(mapi, 'service_is_up')
 
         db.service_get_all_by_topic(self.context,
                 self.topic).AndReturn(services)
-        self.membership_api.service_is_up(service1).AndReturn(False)
-        self.membership_api.service_is_up(service2).AndReturn(True)
+        mapi.service_is_up(service1).AndReturn(False)
+        mapi.service_is_up(service2).AndReturn(True)
 
         self.mox.ReplayAll()
         result = self.driver.hosts_up(self.context, self.topic)
