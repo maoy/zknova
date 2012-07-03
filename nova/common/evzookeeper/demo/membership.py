@@ -31,7 +31,10 @@ class NodeManager(object):
         self.name = name
         self.membership = membership.Membership(session,
                                                 "/basedir", name)
+
+
 class NodeMonitor(object):
+
     def __init__(self, session):
         self.mon = membership.MembershipMonitor(session,
                                                 "/basedir",
