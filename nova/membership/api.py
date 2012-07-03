@@ -48,9 +48,19 @@ class API(object):
     def __new__(cls, *args, **kwargs):
 
         if not cls._driver:
-            LOG.debug(_('Membership driver is instance of %s '),
+            LOG.debug(_('Membership driver defined as an instance of %s '),
                       str(FLAGS.membership_driver))
-            cls._driver = importutils.import_object(FLAGS.membership_driver)
+
+            driver_class = FLAGS.membership_driver
+            # Check that Zookeeper is installed
+            if(driver_class.endswith('ZK_Driver')):
+                try:
+                    import zookeeper
+                except ImportError:
+                    LOG.debug(_('Zookeepr is not supported, membership will\
+work with DB driver: %s '), str(_default_driver))
+                    driver_class = _default_driver
+            cls._driver = importutils.import_object(driver_class)
             check_isinstance(cls._driver, MemberShipDriver)
             # we don't have to check that cls._driver is not NONE,
             # check_isinstance does it
@@ -63,7 +73,7 @@ class API(object):
         @param member_id: the joined member ID
         @param group: the group name, of the joined member
         @param service: the optional parameter for ZK driver and mandatory for
-        DB driver, this parameter can be used for notifications about
+            DB driver, this parameter can be used for notifications about
         disconnect mode and update some internals
         """
         LOG.debug(_('Join new membership member %(id)s to the %(gr)s group,\

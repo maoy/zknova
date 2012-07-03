@@ -19,12 +19,16 @@ from nova import membership
 from nova.openstack.common import cfg
 from nova import test
 
+try:
+    import zookeeper
+    _zk_installed = True
+except ImportError:
+    _zk_installed = False
+
 FLAGS = flags.FLAGS
 
 
 class ZKMembershipTestCase(test.TestCase):
-
-    _zk_installed = False
 
     def setUp(self):
         super(ZKMembershipTestCase, self).setUp()
@@ -33,12 +37,11 @@ class ZKMembershipTestCase(test.TestCase):
         FLAGS.zk_log_file = './zk.log'
         FLAGS.zk_conn_refresh = 15
         FLAGS.zk_recv_timeout = 6000
-        self.membership_api = membership.API()
 
     @test.skip_unless(_zk_installed, 'Zookeeper is not supported')
     def testJOIN_is_up(self):
+        self.membership_api = membership.API()
         service_id = {'topic': 'unittest', 'host': 'serviceA'}
-        print 'a'
         self.membership_api.join(service_id['host'],
                                  service_id['topic'], None)
         eventlet.sleep(5)
@@ -49,6 +52,7 @@ class ZKMembershipTestCase(test.TestCase):
 
     @test.skip_unless(_zk_installed, 'Zookeeper is not supported')
     def testSubscribeToChanges(self):
+        self.membership_api = membership.API()
         self.membership_api.subscribe_to_changes(['unittest'])
         eventlet.sleep(5)
         service_id = {'topic': 'unittest', 'host': 'serviceA'}
@@ -59,6 +63,7 @@ class ZKMembershipTestCase(test.TestCase):
 
     @test.skip_unless(_zk_installed, 'Zookeeper is not supported')
     def testStop(self):
+        self.membership_api = membership.API()
         service_id = {'topic': 'unittest', 'host': 'serviceA'}
         pulse = self.membership_api.join(service_id['host'],
                                          service_id['topic'], None)
