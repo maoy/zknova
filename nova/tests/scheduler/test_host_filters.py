@@ -108,7 +108,7 @@ class HostFiltersTestCase(test.TestCase):
 
     def _stub_service_is_up(self, ret_value):
         def fake_service_is_up(self, service):
-		return ret_value
+                return ret_value
         self.stubs.Set(membership.API, 'service_is_up', fake_service_is_up)
 
     def test_affinity_different_filter_passes(self):
