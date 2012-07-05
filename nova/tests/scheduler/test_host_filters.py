@@ -107,9 +107,9 @@ class HostFiltersTestCase(test.TestCase):
         self.assertTrue(filt_cls.host_passes(host, {}))
 
     def _stub_service_is_up(self, ret_value):
-        def fake_service_is_up(service):
-            return ret_value
-        self.stubs.Set(membership, 'service_is_up', fake_service_is_up)
+        def fake_service_is_up(self, service):
+		return ret_value
+        self.stubs.Set(membership.API, 'service_is_up', fake_service_is_up)
 
     def test_affinity_different_filter_passes(self):
         filt_cls = self.class_map['DifferentHostFilter']()

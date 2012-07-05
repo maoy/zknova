@@ -32,6 +32,7 @@ class ZKMembershipTestCase(test.TestCase):
 
     def setUp(self):
         super(ZKMembershipTestCase, self).setUp()
+        membership.API._driver = None
         self.flags(membership_driver='nova.membership.zk_driver.ZK_Driver')
         FLAGS.zk_servers = 'localhost:2181'
         FLAGS.zk_log_file = './zk.log'

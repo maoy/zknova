@@ -318,7 +318,7 @@ class SchedulerTestCase(test.TestCase):
 
     # So we can subclass this test and re-use tests if we need.
     driver_cls = driver.Scheduler
-    membership_api = membership.API()
+    membership_api = membership.API
 
     def setUp(self):
         super(SchedulerTestCase, self).setUp()
@@ -367,16 +367,14 @@ class SchedulerTestCase(test.TestCase):
         service1 = {'host': 'host1'}
         service2 = {'host': 'host2'}
         services = [service1, service2]
-        mapi = membership.API()
-        
+
         self.mox.StubOutWithMock(db, 'service_get_all_by_topic')
-        
-        self.mox.StubOutWithMock(mapi, 'service_is_up')
+        self.mox.StubOutWithMock(self.membership_api, 'service_is_up')
 
         db.service_get_all_by_topic(self.context,
                 self.topic).AndReturn(services)
-        mapi.service_is_up(service1).AndReturn(False)
-        mapi.service_is_up(service2).AndReturn(True)
+        self.membership_api.service_is_up(service1).AndReturn(False)
+        self.membership_api.service_is_up(service2).AndReturn(True)
 
         self.mox.ReplayAll()
         result = self.driver.hosts_up(self.context, self.topic)
@@ -478,7 +476,7 @@ class SchedulerTestCase(test.TestCase):
         """Test live migration when all checks pass."""
 
         self.mox.StubOutWithMock(db, 'instance_get')
-        self.mox.StubOutWithMock(membership, 'service_is_up')
+        self.mox.StubOutWithMock(self.membership_api, 'service_is_up')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
         self.mox.StubOutWithMock(self.driver, '_get_compute_info')
         self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
@@ -588,7 +586,7 @@ class SchedulerTestCase(test.TestCase):
         """Raise exception when src compute node is not alive."""
 
         self.mox.StubOutWithMock(db, 'instance_get')
-        self.mox.StubOutWithMock(membership, 'service_is_up')
+        self.mox.StubOutWithMock(self.membership_api, 'service_is_up')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
 
         dest = 'fake_host2'
@@ -613,7 +611,7 @@ class SchedulerTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
-        self.mox.StubOutWithMock(membership, 'service_is_up')
+        self.mox.StubOutWithMock(self.membership_api, 'service_is_up')
 
         dest = 'fake_host2'
         block_migration = False
@@ -638,7 +636,7 @@ class SchedulerTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
-        self.mox.StubOutWithMock(membership, 'service_is_up')
+        self.mox.StubOutWithMock(self.membership_api, 'service_is_up')
 
         block_migration = False
         disk_over_commit = False
@@ -666,7 +664,7 @@ class SchedulerTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
-        self.mox.StubOutWithMock(membership, 'service_is_up')
+        self.mox.StubOutWithMock(self.membership_api, 'service_is_up')
         self.mox.StubOutWithMock(self.driver, '_get_compute_info')
         self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
 
@@ -699,7 +697,7 @@ class SchedulerTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
-        self.mox.StubOutWithMock(membership, 'service_is_up')
+        self.mox.StubOutWithMock(self.membership_api, 'service_is_up')
         self.mox.StubOutWithMock(self.driver,
                 'assert_compute_node_has_enough_memory')
         self.mox.StubOutWithMock(self.driver, '_get_compute_info')
