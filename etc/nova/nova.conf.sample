@@ -1811,4 +1811,26 @@
 # membership_driver = nova.membership.db_driver.DB_Driver
 ###  (StrOpt) The driver for membership service.
 
-# Total option count: 483
+######## defined in nova.common.evzookeeper.__init__ ########
+
+# zk_servers = 
+### (StrOpt) Comma separated host:port pairs, each corresponding to 
+###                     a ZK server. e.g. 127.0.0.1:1281,127.0.0.1:1281'
+ 
+# zk_log_file = 
+### (StrOpt) File name to redirect zookeeper logs, "stderr" and 
+###                    "stdout" redirect to the standard output and the  
+###                    standard output.
+
+# zk_conn_refresh = 10
+### (IntOpt) ZKSession refresh interval in sec
+
+
+# zk_recv_timeout = 5000
+### (IntOpt)  ZK clients detects server failures in 2/3 of 
+###                    recv_timeout, and then it retries the same IP at every 
+###                    recv_timeout period if only one of ensemble is given. 
+###                    If more than two ensemble IP are given, ZK clients will 
+###                    try next IP immediately. [msec]
+
+# Total option count: 487
