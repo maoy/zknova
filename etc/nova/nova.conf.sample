@@ -1806,5 +1806,9 @@
 # san_zfs_volume_base=rpool/
 #### (StrOpt) The ZFS path under which to create zvols for volumes.
 
+######## defined in nova.membership.api ########
 
-# Total option count: 482
+# membership_driver = nova.membership.db_driver.DB_Driver
+###  (StrOpt) The driver for membership service.
+
+# Total option count: 483
