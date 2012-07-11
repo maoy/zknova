@@ -1,5 +1,4 @@
-# Copyright (c) 2011-2012
-# All Rights Reserved.
+# Copyright (c) IBM 2012 Alexey Roytman <roytman at il dot ibm dot com>
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -21,7 +20,6 @@ from nova import context
 from nova import db
 from nova import flags
 from nova import membership
-from nova.openstack.common import timeutils
 from nova import service
 from nova import test
 from nova import utils
@@ -77,12 +75,12 @@ class DBMembershipTestCase(test.TestCase):
         #down_time = 5
 
         #self.flags(service_down_time=down_time)
-        self.mox.StubOutWithMock(timeutils, 'utcnow')
+        self.mox.StubOutWithMock(utils, 'utcnow')
         self.membership_api = membership.API()
 
         # Up (equal)
-        timeutils.utcnow().AndReturn(fts_func(fake_now))
-        print "utils.utcnow() = %s" % str(timeutils.utcnow())
+        utils.utcnow().AndReturn(fts_func(fake_now))
+        print "utils.utcnow() = %s" % str(utils.utcnow())
         service = {'updated_at': fts_func(fake_now - self.down_time),
                    'created_at': fts_func(fake_now - self.down_time)}
         self.mox.ReplayAll()
@@ -91,7 +89,7 @@ class DBMembershipTestCase(test.TestCase):
 
         self.mox.ResetAll()
         # Up
-        timeutils.utcnow().AndReturn(fts_func(fake_now))
+        utils.utcnow().AndReturn(fts_func(fake_now))
         service = {'updated_at': fts_func(fake_now - self.down_time + 1),
                    'created_at': fts_func(fake_now - self.down_time + 1)}
         self.mox.ReplayAll()
@@ -100,7 +98,7 @@ class DBMembershipTestCase(test.TestCase):
 
         self.mox.ResetAll()
         # Down
-        timeutils.utcnow().AndReturn(fts_func(fake_now))
+        utils.utcnow().AndReturn(fts_func(fake_now))
         service = {'updated_at': fts_func(fake_now - self.down_time - 1),
                    'created_at': fts_func(fake_now - self.down_time - 1)}
         self.mox.ReplayAll()
