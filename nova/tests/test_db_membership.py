@@ -1,5 +1,4 @@
-# Copyright (c) 2011-2012
-# All Rights Reserved.
+# Copyright (c) IBM 2012 Alexey Roytman <roytman at il dot ibm dot com>
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
