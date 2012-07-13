@@ -20,6 +20,7 @@ from nova import context
 from nova import db
 from nova import flags
 from nova import membership
+from nova.openstack.common import timeutils
 from nova import service
 from nova import test
 from nova import utils
@@ -75,12 +76,12 @@ class DBMembershipTestCase(test.TestCase):
         #down_time = 5
 
         #self.flags(service_down_time=down_time)
-        self.mox.StubOutWithMock(utils, 'utcnow')
+        self.mox.StubOutWithMock(timeutils, 'utcnow')
         self.membership_api = membership.API()
 
         # Up (equal)
-        utils.utcnow().AndReturn(fts_func(fake_now))
-        print "utils.utcnow() = %s" % str(utils.utcnow())
+        timeutils.utcnow().AndReturn(fts_func(fake_now))
+        print "utils.utcnow() = %s" % str(timeutils.utcnow())
         service = {'updated_at': fts_func(fake_now - self.down_time),
                    'created_at': fts_func(fake_now - self.down_time)}
         self.mox.ReplayAll()
@@ -89,7 +90,7 @@ class DBMembershipTestCase(test.TestCase):
 
         self.mox.ResetAll()
         # Up
-        utils.utcnow().AndReturn(fts_func(fake_now))
+        timeutils.utcnow().AndReturn(fts_func(fake_now))
         service = {'updated_at': fts_func(fake_now - self.down_time + 1),
                    'created_at': fts_func(fake_now - self.down_time + 1)}
         self.mox.ReplayAll()
@@ -98,7 +99,7 @@ class DBMembershipTestCase(test.TestCase):
 
         self.mox.ResetAll()
         # Down
-        utils.utcnow().AndReturn(fts_func(fake_now))
+        timeutils.utcnow().AndReturn(fts_func(fake_now))
         service = {'updated_at': fts_func(fake_now - self.down_time - 1),
                    'created_at': fts_func(fake_now - self.down_time - 1)}
         self.mox.ReplayAll()
