@@ -28,10 +28,10 @@ from nova import utils
 FLAGS = flags.FLAGS
 
 
-class DBMembershipTestCase(test.TestCase):
+class DBServiceGroupTestCase(test.TestCase):
 
     def setUp(self):
-        super(DBMembershipTestCase, self).setUp()
+        super(DBServiceGroupTestCase, self).setUp()
         servicegroup.API._driver = None
         self.flags(servicegroup_driver='nova.servicegroup.db_driver.DB_Driver')
         self.down_time = 3
