@@ -13,9 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#from nova.membership.api import *
 """
 The membership service for Nova. Different implementations can be plugged
 according to the Nova configuration."""
 
-from nova.membership.api import API
+from nova.servicegroup.api import API

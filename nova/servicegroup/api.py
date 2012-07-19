@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Defines interface for the membership access.
+"""Defines interface for the servicegroup membership access.
 """
 from nova import flags
 from nova.openstack.common import cfg
@@ -24,13 +24,13 @@ from nova.utils import check_isinstance
 
 
 LOG = logging.getLogger(__name__)
-_default_driver = 'nova.membership.db_driver.DB_Driver'
-membership_driver_opt = cfg.StrOpt('membership_driver',
+_default_driver = 'nova.servicegroup.db_driver.DB_Driver'
+servicegroup_driver_opt = cfg.StrOpt('servicegroup_driver',
                                    default=_default_driver,
-                                   help='The driver for membership service.')
+                                   help='The driver for servicegroup service.')
 
 FLAGS = flags.FLAGS
-FLAGS.register_opt(membership_driver_opt)
+FLAGS.register_opt(servicegroup_driver_opt)
 
 
 class API(object):
@@ -40,28 +40,28 @@ class API(object):
     def __new__(cls, *args, **kwargs):
 
         if not cls._driver:
-            LOG.debug(_('Membership driver defined as an instance of %s '),
-                      str(FLAGS.membership_driver))
+            LOG.debug(_('ServiceGroup driver defined as an instance of %s '),
+                      str(FLAGS.servicegroup_driver))
 
-            driver_class = FLAGS.membership_driver
+            driver_class = FLAGS.servicegroup_driver
             # Check if ZooKeeper is installed
             if(driver_class.endswith('ZK_Driver')):
                 try:
                     import zookeeper
                 except ImportError:
-                    LOG.warn(_('Zookeepr is not supported, membership will'
-                               'fall back to the DB driver: %s'),
+                    LOG.warn(_('Zookeepr is not supported, ServiceGroup driver\
+ will fall back to the DB driver: %s'),
                              str(_default_driver))
                     driver_class = _default_driver
             cls._driver = importutils.import_object(driver_class)
-            check_isinstance(cls._driver, MemberShipDriver)
+            check_isinstance(cls._driver, ServiceGroupDriver)
             # we don't have to check that cls._driver is not NONE,
             # check_isinstance does it
         return super(API, cls).__new__(cls)
 
     def join(self, member_id, group, service=None):
         """
-        Add a new member to the membership
+        Add a new member to the ServiceGroup
 
         @param member_id: the joined member ID
         @param group: the group name, of the joined member
@@ -69,33 +69,33 @@ class API(object):
             DB driver, this parameter can be used for notifications about
         disconnect mode and update some internals
         """
-        LOG.debug(_('Join new membership member %(id)s to the %(gr)s group,\
+        LOG.debug(_('Join new ServiceGroup member %(id)s to the %(gr)s group,\
 service = %(sr)s'), {'id': member_id, 'gr': group, 'sr': service})
         return self._driver.join(member_id, group, service)
 
     def subscribe_to_changes(self, groups):
         """Subscribing to cache changes"""
-        LOG.debug(_('Subscribing to changes in the %s membership groups'),
+        LOG.debug(_('Subscribing to changes in the %s ServiceGroup groups'),
                   str(groups))
         return self._driver.subscribe_to_changes(groups)
 
     def service_is_up(self, member_id):
         """ Check if the given member is up"""
-        LOG.debug(_('Check if the given member [%s] is part of the membership,\
- is up'), member_id)
+        LOG.debug(_('Check if the given member [%s] is part of the \
+ServiceGroup, is up'), member_id)
         return self._driver.is_up(member_id)
 
     def leave(self, context, member_id):
         """
-        Explicitly remove the given member from the membership monitoring
+        Explicitly remove the given member from the ServiceGroup monitoring
         """
         LOG.debug(_('Explicitly remove the given member [%s] from the \
- membership monitoring'), member_id)
+ServiceGroup monitoring'), member_id)
         return self._driver.leave(member_id['host'], member_id['topic'])
 
 
-class MemberShipDriver(object):
-    """Base class for membership drivers. """
+class ServiceGroupDriver(object):
+    """Base class for ServiceGroup drivers. """
 
     def join(self, member_id, group, service=None):
         """Join the given service with it's group"""
@@ -112,7 +112,7 @@ class MemberShipDriver(object):
         raise NotImplementedError()
 
     def leave(self, host, group):
-        """ Remove the given member from the membership monitoring
+        """ Remove the given member from the ServiceGroup monitoring
         TODO implement in the subclases
         """
         raise NotImplementedError()
