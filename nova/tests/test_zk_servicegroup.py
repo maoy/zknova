@@ -23,7 +23,6 @@ try:
     _zk_installed = True
 except ImportError:
     _zk_installed = False
-_zk_installed = True
 FLAGS = flags.FLAGS
 
 
