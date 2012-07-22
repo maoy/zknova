@@ -14,8 +14,8 @@
 
 import eventlet
 from nova import flags
-from nova import membership
 from nova.openstack.common import cfg
+from nova import servicegroup
 from nova import test
 
 try:
@@ -23,16 +23,16 @@ try:
     _zk_installed = True
 except ImportError:
     _zk_installed = False
-
+_zk_installed = True
 FLAGS = flags.FLAGS
 
 
-class ZKMembershipTestCase(test.TestCase):
+class ZKServiceGroupTestCase(test.TestCase):
 
     def setUp(self):
-        super(ZKMembershipTestCase, self).setUp()
-        membership.API._driver = None
-        self.flags(membership_driver='nova.membership.zk_driver.ZK_Driver')
+        super(ZKServiceGroupTestCase, self).setUp()
+        servicegroup.API._driver = None
+        self.flags(servicegroup_driver='nova.servicegroup.zk_driver.ZK_Driver')
         FLAGS.zk_servers = 'localhost:2181'
         FLAGS.zk_log_file = './zk.log'
         FLAGS.zk_conn_refresh = 15
@@ -40,35 +40,35 @@ class ZKMembershipTestCase(test.TestCase):
 
     @test.skip_unless(_zk_installed, 'Zookeeper is not supported')
     def testJOIN_is_up(self):
-        self.membership_api = membership.API()
+        self.servicegroup_api = servicegroup.API()
         service_id = {'topic': 'unittest', 'host': 'serviceA'}
-        self.membership_api.join(service_id['host'],
+        self.servicegroup_api.join(service_id['host'],
                                  service_id['topic'], None)
         eventlet.sleep(5)
-        self.assertTrue(self.membership_api.service_is_up(service_id))
-        self.membership_api.leave(None, service_id)
+        self.assertTrue(self.servicegroup_api.service_is_up(service_id))
+        self.servicegroup_api.leave(None, service_id)
         eventlet.sleep(5)
-        self.assertFalse(self.membership_api.service_is_up(service_id))
+        self.assertFalse(self.servicegroup_api.service_is_up(service_id))
 
     @test.skip_unless(_zk_installed, 'Zookeeper is not supported')
     def testSubscribeToChanges(self):
-        self.membership_api = membership.API()
-        self.membership_api.subscribe_to_changes(['unittest'])
+        self.servicegroup_api = servicegroup.API()
+        self.servicegroup_api.subscribe_to_changes(['unittest'])
         eventlet.sleep(5)
         service_id = {'topic': 'unittest', 'host': 'serviceA'}
-        self.membership_api.join(service_id['host'],
+        self.servicegroup_api.join(service_id['host'],
                                  service_id['topic'], None)
         eventlet.sleep(5)
-        self.assertTrue(self.membership_api.service_is_up(service_id))
+        self.assertTrue(self.servicegroup_api.service_is_up(service_id))
 
     @test.skip_unless(_zk_installed, 'Zookeeper is not supported')
     def testStop(self):
-        self.membership_api = membership.API()
+        self.servicegroup_api = servicegroup.API()
         service_id = {'topic': 'unittest', 'host': 'serviceA'}
-        pulse = self.membership_api.join(service_id['host'],
+        pulse = self.servicegroup_api.join(service_id['host'],
                                          service_id['topic'], None)
         eventlet.sleep(5)
-        self.assertTrue(self.membership_api.service_is_up(service_id))
+        self.assertTrue(self.servicegroup_api.service_is_up(service_id))
         pulse.stop()
         eventlet.sleep(5)
-        self.assertFalse(self.membership_api.service_is_up(service_id))
+        self.assertFalse(self.servicegroup_api.service_is_up(service_id))

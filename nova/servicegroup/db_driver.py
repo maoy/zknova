@@ -17,25 +17,25 @@
 from nova import db
 from nova import exception
 from nova import flags
-from nova.membership import api
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
+from nova.servicegroup import api
 from nova import utils
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
 
-class DB_Driver(api.MemberShipDriver):
+class DB_Driver(api.ServiceGroupDriver):
 
     def join(self, member_id, group, service=None):
         """Join the given service with it's group"""
-        LOG.debug(_('DB_Driver: join new membership member %(id)s to the \
+        LOG.debug(_('DB_Driver: join new servicegroup member %(id)s to the \
 %(gr)s group, service= %(sr)s'),
                   {'id': member_id, 'gr': group, 'sr': str(service)})
         if service is None:
             raise RuntimeError(_('service is a mandatory argument for DB based\
-membership driver'))
+servicegroup driver'))
         report_interval = service.report_interval
         if report_interval:
             pulse = utils.LoopingCall(self._report_state, service)

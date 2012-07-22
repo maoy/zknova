@@ -28,13 +28,13 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import membership
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova.scheduler import driver
 from nova.scheduler import manager
+from nova import servicegroup
 from nova import test
 from nova.tests.scheduler import fakes
 
@@ -317,7 +317,7 @@ class SchedulerTestCase(test.TestCase):
 
     # So we can subclass this test and re-use tests if we need.
     driver_cls = driver.Scheduler
-    membership_api = membership.API
+    servicegroup_api = servicegroup.API
 
     def setUp(self):
         super(SchedulerTestCase, self).setUp()
@@ -368,12 +368,12 @@ class SchedulerTestCase(test.TestCase):
         services = [service1, service2]
 
         self.mox.StubOutWithMock(db, 'service_get_all_by_topic')
-        self.mox.StubOutWithMock(self.membership_api, 'service_is_up')
+        self.mox.StubOutWithMock(self.servicegroup_api, 'service_is_up')
 
         db.service_get_all_by_topic(self.context,
                 self.topic).AndReturn(services)
-        self.membership_api.service_is_up(service1).AndReturn(False)
-        self.membership_api.service_is_up(service2).AndReturn(True)
+        self.servicegroup_api.service_is_up(service1).AndReturn(False)
+        self.servicegroup_api.service_is_up(service2).AndReturn(True)
 
         self.mox.ReplayAll()
         result = self.driver.hosts_up(self.context, self.topic)
@@ -498,7 +498,7 @@ class SchedulerTestCase(test.TestCase):
         """Test live migration when all checks pass."""
 
         self.mox.StubOutWithMock(db, 'instance_get')
-        self.mox.StubOutWithMock(self.membership_api, 'service_is_up')
+        self.mox.StubOutWithMock(self.servicegroup_api, 'service_is_up')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
         self.mox.StubOutWithMock(self.driver, '_get_compute_info')
         self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
@@ -516,12 +516,12 @@ class SchedulerTestCase(test.TestCase):
 
         db.service_get_all_compute_by_host(self.context,
                 instance['host']).AndReturn(['fake_service2'])
-        self.membership_api.service_is_up('fake_service2').AndReturn(True)
+        self.servicegroup_api.service_is_up('fake_service2').AndReturn(True)
 
         # Destination checks (compute is up, enough memory, disk)
         db.service_get_all_compute_by_host(self.context,
                 dest).AndReturn(['fake_service3'])
-        self.membership_api.service_is_up('fake_service3').AndReturn(True)
+        self.servicegroup_api.service_is_up('fake_service3').AndReturn(True)
         # assert_compute_node_has_enough_memory()
         self.driver._get_compute_info(self.context, dest,
                 'memory_mb').AndReturn(2048)
@@ -604,7 +604,7 @@ class SchedulerTestCase(test.TestCase):
         """Raise exception when src compute node is not alive."""
 
         self.mox.StubOutWithMock(db, 'instance_get')
-        self.mox.StubOutWithMock(self.membership_api, 'service_is_up')
+        self.mox.StubOutWithMock(self.servicegroup_api, 'service_is_up')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
 
         dest = 'fake_host2'
@@ -615,7 +615,7 @@ class SchedulerTestCase(test.TestCase):
         # Compute down
         db.service_get_all_compute_by_host(self.context,
                 instance['host']).AndReturn(['fake_service2'])
-        self.membership_api.service_is_up('fake_service2').AndReturn(False)
+        self.servicegroup_api.service_is_up('fake_service2').AndReturn(False)
 
         self.mox.ReplayAll()
         self.assertRaises(exception.ComputeServiceUnavailable,
@@ -629,7 +629,7 @@ class SchedulerTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
-        self.mox.StubOutWithMock(self.membership_api, 'service_is_up')
+        self.mox.StubOutWithMock(self.servicegroup_api, 'service_is_up')
 
         dest = 'fake_host2'
         block_migration = False
@@ -640,7 +640,7 @@ class SchedulerTestCase(test.TestCase):
         db.service_get_all_compute_by_host(self.context,
                 dest).AndReturn(['fake_service3'])
         # Compute is down
-        self.membership_api.service_is_up('fake_service3').AndReturn(False)
+        self.servicegroup_api.service_is_up('fake_service3').AndReturn(False)
 
         self.mox.ReplayAll()
         self.assertRaises(exception.ComputeServiceUnavailable,
@@ -654,7 +654,7 @@ class SchedulerTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
-        self.mox.StubOutWithMock(self.membership_api, 'service_is_up')
+        self.mox.StubOutWithMock(self.servicegroup_api, 'service_is_up')
 
         block_migration = False
         disk_over_commit = False
@@ -667,7 +667,7 @@ class SchedulerTestCase(test.TestCase):
         self.driver._live_migration_src_check(self.context, instance)
         db.service_get_all_compute_by_host(self.context,
                 dest).AndReturn(['fake_service3'])
-        self.membership_api.service_is_up('fake_service3').AndReturn(True)
+        self.servicegroup_api.service_is_up('fake_service3').AndReturn(True)
 
         self.mox.ReplayAll()
         self.assertRaises(exception.UnableToMigrateToSelf,
@@ -682,7 +682,7 @@ class SchedulerTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
-        self.mox.StubOutWithMock(self.membership_api, 'service_is_up')
+        self.mox.StubOutWithMock(self.servicegroup_api, 'service_is_up')
         self.mox.StubOutWithMock(self.driver, '_get_compute_info')
         self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
 
@@ -695,7 +695,7 @@ class SchedulerTestCase(test.TestCase):
         self.driver._live_migration_src_check(self.context, instance)
         db.service_get_all_compute_by_host(self.context,
                 dest).AndReturn(['fake_service3'])
-        self.membership_api.service_is_up('fake_service3').AndReturn(True)
+        self.servicegroup_api.service_is_up('fake_service3').AndReturn(True)
 
         self.driver._get_compute_info(self.context, dest,
                 'memory_mb').AndReturn(2048)
@@ -715,7 +715,7 @@ class SchedulerTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
-        self.mox.StubOutWithMock(self.membership_api, 'service_is_up')
+        self.mox.StubOutWithMock(self.servicegroup_api, 'service_is_up')
         self.mox.StubOutWithMock(self.driver,
                 'assert_compute_node_has_enough_memory')
         self.mox.StubOutWithMock(self.driver, '_get_compute_info')
@@ -732,7 +732,7 @@ class SchedulerTestCase(test.TestCase):
         self.driver._live_migration_src_check(self.context, instance)
         db.service_get_all_compute_by_host(self.context,
                 dest).AndReturn(['fake_service3'])
-        self.membership_api.service_is_up('fake_service3').AndReturn(True)
+        self.servicegroup_api.service_is_up('fake_service3').AndReturn(True)
 
         # Enough memory
         self.driver.assert_compute_node_has_enough_memory(self.context,

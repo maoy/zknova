@@ -17,21 +17,21 @@
 from nova.common import evzookeeper
 from nova.common.evzookeeper import get_session
 from nova.common.evzookeeper import membership
-from nova.membership import api
 from nova.openstack.common import log as logging
+from nova.servicegroup import api
 from nova import utils
 
 LOG = logging.getLogger(__name__)
 
 
-class ZK_Driver(api.MemberShipDriver):
+class ZK_Driver(api.ServiceGroupDriver):
 
     _memberships = {}
     _monitors = {}
 
     def join(self, member_id, group, service=None):
         """Join the given service with it's group"""
-        LOG.debug(_('ZK_Driver: join new membership member %(id)s to the \
+        LOG.debug(_('ZK_Driver: join new ServiceGroup member %(id)s to the \
 %(gr)s group, service= %(sr)s'),
                   {'id': member_id, 'gr': group, 'sr': str(service)})
         if not group.startswith('/'):
@@ -54,7 +54,7 @@ class ZK_Driver(api.MemberShipDriver):
         #TODO(roytman) add notification about disconnect mode
 
     def leave(self, host, group):
-        """ Remove the given member from the membership monitoring
+        """ Remove the given member from the ServiceGroup monitoring
         """
         if not group.startswith('/'):
             group = '/' + group
@@ -79,7 +79,7 @@ group', {'id': host, 'gr': group})
         if monitor:
             nodes = monitor.get_all()
         else:
-            LOG.debug('ZK_Driver.is_up cached membership is None')
+            LOG.debug('ZK_Driver.is_up cached ServiceGroup is None')
             try:
                 nodes = get_session().get_children(group)
             except Exception as ex:
@@ -96,7 +96,7 @@ group', {'id': host, 'gr': group})
 
 class FakeLoopingCall(utils.LoopingCall):
     """The fake Looping Call implementation, created for backward
-    compatibility with a membership based on DB
+    compatibility with a ServiceGroup based on DB
     """
     def __init__(self, driver, host, group):
         self._driver = driver

@@ -35,11 +35,11 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import membership
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
+from nova import servicegroup
 from nova import utils
 from nova import version
 from nova import wsgi
@@ -371,7 +371,7 @@ class Service(object):
         self.periodic_fuzzy_delay = periodic_fuzzy_delay
         self.saved_args, self.saved_kwargs = args, kwargs
         self.timers = []
-        self.membership_api = membership.API()
+        self.servicegroup_api = servicegroup.API()
 
     def start(self):
         vcs_string = version.version_string_with_vcs()
@@ -409,19 +409,20 @@ class Service(object):
         # Consume from all consumers in a thread
         self.conn.consume_in_thread()
 
-        LOG.debug(_("Join membership for this service %s") % self.topic)
+        LOG.debug(_("Join ServiceGroup membership for this service %s")
+                  % self.topic)
 
-        # Add service to the membership group.
-        pulse = self.membership_api.join(self.host, self.topic, self)
+        # Add service to the ServiceGroup membership group.
+        pulse = self.servicegroup_api.join(self.host, self.topic, self)
         if pulse:
             self.timers.append(pulse)
 
         # Currently only scheduler service needs updates of services state
         if 'nova-scheduler' == self.binary:
-            self.membership_api.subscribe_to_changes(['compute', 'volume',
+            self.servicegroup_api.subscribe_to_changes(['compute', 'volume',
                                                       'network'])
 
-        # If svcgroup_membership is true the service state is managed
+        # If ServiceGroup membership is true the service state is managed
         # via membership. Set report_interval to 0.
 #        if self.report_interval:
 #            pulse = utils.LoopingCall(self.report_state)

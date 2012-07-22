@@ -19,25 +19,25 @@ import mox
 from nova import context
 from nova import db
 from nova import flags
-from nova import membership
 from nova.openstack.common import timeutils
 from nova import service
+from nova import servicegroup
 from nova import test
 from nova import utils
 
 FLAGS = flags.FLAGS
 
 
-class DBMembershipTestCase(test.TestCase):
+class DBServiceGroupTestCase(test.TestCase):
 
     def setUp(self):
-        super(DBMembershipTestCase, self).setUp()
-        membership.API._driver = None
-        self.flags(membership_driver='nova.membership.db_driver.DB_Driver')
+        super(DBServiceGroupTestCase, self).setUp()
+        servicegroup.API._driver = None
+        self.flags(servicegroup_driver='nova.servicegroup.db_driver.DB_Driver')
         self.down_time = 3
         self.flags(enable_new_services=True)
         self.flags(service_down_time=self.down_time)
-        self.membership_api = membership.API()
+        self.servicegroup_api = servicegroup.API()
         self._host = 'foo'
         self._binary = 'nova-fake'
         self._topic = 'unittest'
@@ -56,19 +56,19 @@ class DBMembershipTestCase(test.TestCase):
                                              self._host,
                                              self._binary)
 
-        self.assertTrue(self.membership_api.service_is_up(service_ref))
+        self.assertTrue(self.servicegroup_api.service_is_up(service_ref))
         eventlet.sleep(self.down_time + 1)
         service_ref = db.service_get_by_args(self._ctx,
                                              self._host,
                                              self._binary)
 
-        self.assertTrue(self.membership_api.service_is_up(service_ref))
+        self.assertTrue(self.servicegroup_api.service_is_up(service_ref))
         serv.stop()
         eventlet.sleep(self.down_time + 1)
         service_ref = db.service_get_by_args(self._ctx,
                                              self._host,
                                              self._binary)
-        self.assertFalse(self.membership_api.service_is_up(service_ref))
+        self.assertFalse(self.servicegroup_api.service_is_up(service_ref))
 
     def test_service_is_up(self):
         fts_func = datetime.datetime.fromtimestamp
@@ -77,7 +77,7 @@ class DBMembershipTestCase(test.TestCase):
 
         #self.flags(service_down_time=down_time)
         self.mox.StubOutWithMock(timeutils, 'utcnow')
-        self.membership_api = membership.API()
+        self.servicegroup_api = servicegroup.API()
 
         # Up (equal)
         timeutils.utcnow().AndReturn(fts_func(fake_now))
@@ -85,7 +85,7 @@ class DBMembershipTestCase(test.TestCase):
         service = {'updated_at': fts_func(fake_now - self.down_time),
                    'created_at': fts_func(fake_now - self.down_time)}
         self.mox.ReplayAll()
-        result = self.membership_api.service_is_up(service)
+        result = self.servicegroup_api.service_is_up(service)
         self.assertTrue(result)
 
         self.mox.ResetAll()
@@ -94,7 +94,7 @@ class DBMembershipTestCase(test.TestCase):
         service = {'updated_at': fts_func(fake_now - self.down_time + 1),
                    'created_at': fts_func(fake_now - self.down_time + 1)}
         self.mox.ReplayAll()
-        result = self.membership_api.service_is_up(service)
+        result = self.servicegroup_api.service_is_up(service)
         self.assertTrue(result)
 
         self.mox.ResetAll()
@@ -103,5 +103,5 @@ class DBMembershipTestCase(test.TestCase):
         service = {'updated_at': fts_func(fake_now - self.down_time - 1),
                    'created_at': fts_func(fake_now - self.down_time - 1)}
         self.mox.ReplayAll()
-        result = self.membership_api.service_is_up(service)
+        result = self.servicegroup_api.service_is_up(service)
         self.assertFalse(result)
