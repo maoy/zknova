@@ -59,11 +59,11 @@ servicegroup driver'))
                   {'lhb': str(last_heartbeat), 'el': str(elapsed)})
         return abs(elapsed) <= FLAGS.service_down_time
 
-    def getAll(self, group):
+    def get_all(self, group):
         """
         Returns ALL members of the given group
         """
-        LOG.debug(_('DB_Driver: getAll members of the %s group') % group)
+        LOG.debug(_('DB_Driver: get_all members of the %s group') % group)
         #TODO(roytman) filter is_up the return values
         return db.service_get_all_by_topic(group)
 
