@@ -21,7 +21,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.utils import check_isinstance
-
+import random
 
 LOG = logging.getLogger(__name__)
 _default_driver = 'nova.servicegroup.db_driver.DB_Driver'
@@ -36,6 +36,7 @@ FLAGS.register_opt(servicegroup_driver_opt)
 class API(object):
 
     _driver = None
+    _rnd = random.seed
 
     def __new__(cls, *args, **kwargs):
 
@@ -93,6 +94,28 @@ ServiceGroup, is up'), member_id)
 ServiceGroup monitoring'), member_id)
         return self._driver.leave(member_id['host'], member_id['topic'])
 
+    def getAll(self, group):
+        """
+        Returns ALL members of the given group
+        """
+        LOG.debug(_('Returns ALL members of the [%s] \
+ServiceGroup'), group)
+        return self._driver.getAll(group)
+
+    def getRandom(self, group):
+        """
+        Returns random member of the given
+        """
+        LOG.debug(_('Returns random member of the [%s] \
+group'), group)
+        members = getAll(self, group)
+        if members is None:
+            return None
+        length = len(members)
+        if length == 0:
+            return None
+        return members[self._rnd.randint(0, length - 1)]
+
 
 class ServiceGroupDriver(object):
     """Base class for ServiceGroup drivers. """
@@ -114,5 +137,11 @@ class ServiceGroupDriver(object):
     def leave(self, host, group):
         """ Remove the given member from the ServiceGroup monitoring
         TODO implement in the subclases
+        """
+        raise NotImplementedError()
+
+    def getAll(selfself, group):
+        """
+        Returns ALL members of the given group
         """
         raise NotImplementedError()
