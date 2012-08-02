@@ -100,21 +100,15 @@ ServiceGroup monitoring'), member_id)
         """
         LOG.debug(_('Returns ALL members of the [%s] \
 ServiceGroup'), group)
-        return self._driver.getAll(group)
+        return self._driver.get_all(group)
 
     def get_random(self, group):
         """
-        Returns random member of the given
+        Returns random member of the given group
         """
         LOG.debug(_('Returns random member of the [%s] \
 group'), group)
-        members = get_all(self, group)
-        if members is None:
-            return None
-        length = len(members)
-        if length == 0:
-            return None
-        return members[self._rnd.randint(0, length - 1)]
+        return self._driver.get_random(group)
 
 
 class ServiceGroupDriver(object):
@@ -145,3 +139,15 @@ class ServiceGroupDriver(object):
         Returns ALL members of the given group
         """
         raise NotImplementedError()
+
+    def get_random(selfself, group):
+        """
+        Returns random member of the given group
+        """
+        members = get_all(self, group)
+        if members is None:
+            return None
+        length = len(members)
+        if length == 0:
+            return None
+        return members[self._rnd.randint(0, length - 1)]
