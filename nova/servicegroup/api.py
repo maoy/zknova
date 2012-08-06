@@ -94,13 +94,15 @@ ServiceGroup monitoring'), member_id)
         return self._driver.leave(member_id['host'], member_id['topic'])
 
     def get_all(self, group):
-        """Returns ALL members of the given group"""
+        """Returns ALL members of the given group."""
         LOG.debug(_('Returns ALL members of the [%s] \
 ServiceGroup'), group)
         return self._driver.get_all(group)
 
-    def get_random(self, group):
-        """Returns random member of the given group"""
+    def get_one(self, group):
+        """Returns one member of the given group. The strategy to select
+        the member is decided by the driver (e.g. random or round-robin).
+        """
         LOG.debug(_('Returns random member of the [%s] \
 group'), group)
         return self._driver.get_random(group)
@@ -125,13 +127,13 @@ class ServiceGroupDriver(object):
         """Remove the given member from the ServiceGroup monitoring"""
         raise NotImplementedError()
 
-    def get_all(selfself, group):
+    def get_all(self, group):
         """Returns ALL members of the given group"""
         raise NotImplementedError()
 
-    def get_random(selfself, group):
+    def get_one(self, group):
         """Returns random member of the given group"""
-        members = get_all(self, group)
+        members = self.get_all(group)
         if members is None:
             return None
         length = len(members)
