@@ -39,10 +39,10 @@ from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
+from nova import servicegroup
 from nova import utils
 from nova import version
 from nova import wsgi
-
 
 LOG = logging.getLogger(__name__)
 
@@ -390,6 +390,7 @@ class Service(object):
         self.periodic_fuzzy_delay = periodic_fuzzy_delay
         self.saved_args, self.saved_kwargs = args, kwargs
         self.timers = []
+        self.servicegroup_api = servicegroup.API()
 
     def start(self):
         vcs_string = version.version_string_with_vcs()
@@ -426,11 +427,18 @@ class Service(object):
         # Consume from all consumers in a thread
         self.conn.consume_in_thread()
 
-        if self.report_interval:
-            pulse = utils.LoopingCall(self.report_state)
-            pulse.start(interval=self.report_interval,
-                        initial_delay=self.report_interval)
+        LOG.debug(_("Join ServiceGroup membership for this service %s")
+                  % self.topic)
+
+        # Add service to the ServiceGroup membership group.
+        pulse = self.servicegroup_api.join(self.host, self.topic, self)
+        if pulse:
             self.timers.append(pulse)
+
+        # Currently only scheduler service needs updates of services state
+        if 'nova-scheduler' == self.binary:
+            self.servicegroup_api.subscribe_to_changes(['compute', 'volume',
+                                                      'network'])
 
         if self.periodic_interval:
             if self.periodic_fuzzy_delay:

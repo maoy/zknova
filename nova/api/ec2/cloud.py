@@ -40,6 +40,7 @@ from nova import network
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import quota
+from nova import servicegroup
 from nova import utils
 from nova import volume
 
@@ -188,6 +189,7 @@ class CloudController(object):
                                    volume_api=self.volume_api,
                                    security_group_api=self.security_group_api)
         self.keypair_api = compute.api.KeypairAPI()
+        self.servicegroup_api = servicegroup.API()
 
     def __str__(self):
         return 'CloudController'
@@ -246,7 +248,7 @@ class CloudController(object):
             hsvcs = [service for service in services
                      if service['host'] == host]
             for svc in hsvcs:
-                alive = utils.service_is_up(svc)
+                alive = self.servicegroup_api.service_is_up(svc)
                 art = (alive and ":-)") or "XXX"
                 active = 'enabled'
                 if svc['disabled']:
