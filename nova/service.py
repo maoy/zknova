@@ -422,14 +422,6 @@ class Service(object):
             self.servicegroup_api.subscribe_to_changes(['compute', 'volume',
                                                       'network'])
 
-        # If ServiceGroup membership is true the service state is managed
-        # via membership. Set report_interval to 0.
-#        if self.report_interval:
-#            pulse = utils.LoopingCall(self.report_state)
-#            pulse.start(interval=self.report_interval,
-#                        initial_delay=self.report_interval)
-#            self.timers.append(pulse)
-
         if self.periodic_interval:
             if self.periodic_fuzzy_delay:
                 initial_delay = random.randint(0, self.periodic_fuzzy_delay)
