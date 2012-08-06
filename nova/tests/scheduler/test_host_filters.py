@@ -24,9 +24,9 @@ from nova import flags
 from nova.openstack.common import jsonutils
 from nova.scheduler import filters
 from nova.scheduler.filters.trusted_filter import AttestationService
+from nova import servicegroup
 from nova import test
 from nova.tests.scheduler import fakes
-from nova import utils
 
 
 DATA = ''
@@ -107,9 +107,9 @@ class HostFiltersTestCase(test.TestCase):
         self.assertTrue(filt_cls.host_passes(host, {}))
 
     def _stub_service_is_up(self, ret_value):
-        def fake_service_is_up(service):
-            return ret_value
-        self.stubs.Set(utils, 'service_is_up', fake_service_is_up)
+        def fake_service_is_up(self, service):
+                return ret_value
+        self.stubs.Set(servicegroup.API, 'service_is_up', fake_service_is_up)
 
     def test_affinity_different_filter_passes(self):
         filt_cls = self.class_map['DifferentHostFilter']()
