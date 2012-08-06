@@ -14,14 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Defines interface for the servicegroup membership access.
-"""
+"""Define APIs for the servicegroup access."""
+
+import random
+
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.utils import check_isinstance
-import random
 
 LOG = logging.getLogger(__name__)
 _default_driver = 'nova.servicegroup.db_driver.DB_Driver'
@@ -36,22 +37,20 @@ FLAGS.register_opt(servicegroup_driver_opt)
 class API(object):
 
     _driver = None
-    _rnd = random.seed
 
     def __new__(cls, *args, **kwargs):
 
         if not cls._driver:
             LOG.debug(_('ServiceGroup driver defined as an instance of %s '),
                       str(FLAGS.servicegroup_driver))
-
             driver_class = FLAGS.servicegroup_driver
             # Check if ZooKeeper is installed
             if(driver_class.endswith('ZK_Driver')):
                 try:
                     import zookeeper
                 except ImportError:
-                    LOG.warn(_('Zookeepr is not supported, ServiceGroup driver\
- will fall back to the DB driver: %s'),
+                    LOG.warn(_('Cannot import zookeeper, ServiceGroup driver '
+                               'will fall back to the DB driver: %s'),
                              str(_default_driver))
                     driver_class = _default_driver
             cls._driver = importutils.import_object(driver_class)
@@ -86,8 +85,8 @@ ServiceGroup, is up'), member_id)
         return self._driver.is_up(member_id)
 
     def leave(self, context, member_id):
-        """Explicitly remove the given member from the ServiceGroup 
-        monitoring
+        """Explicitly remove the given member from the ServiceGroup
+        monitoring.
         """
         LOG.debug(_('Explicitly remove the given member [%s] from the \
 ServiceGroup monitoring'), member_id)
@@ -111,6 +110,8 @@ group'), group)
 class ServiceGroupDriver(object):
     """Base class for ServiceGroup drivers. """
 
+    _rnd = random.seed
+
     def join(self, member_id, group, service=None):
         """Join the given service with it's group"""
         raise NotImplementedError()
@@ -132,7 +133,10 @@ class ServiceGroupDriver(object):
         raise NotImplementedError()
 
     def get_one(self, group):
-        """Returns random member of the given group"""
+        """The default behavior of get_one is to randomly pick one from
+        the result of get_all(). This is likely to be overridden in the
+        actual driver implementation.
+        """
         members = self.get_all(group)
         if members is None:
             return None
