@@ -1806,5 +1806,8 @@
 # san_zfs_volume_base=rpool/
 #### (StrOpt) The ZFS path under which to create zvols for volumes.
 
+######## defined in nova.servicegroup.api ########
+# servicegroup_driver = nova.servicegroup.db_driver.DbDriver
+###  (StrOpt) The driver for ServiceGroup service.
 
-# Total option count: 482
+# Total option count: 483

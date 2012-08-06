@@ -15,14 +15,16 @@
 
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
-from nova import utils
-
+from nova import servicegroup
 
 LOG = logging.getLogger(__name__)
 
 
 class ComputeFilter(filters.BaseHostFilter):
     """Filter on active Compute nodes"""
+
+    def __init__(self):
+        self.servicegroup_api = servicegroup.API()
 
     def host_passes(self, host_state, filter_properties):
         """Returns True for only active compute nodes"""
@@ -32,7 +34,8 @@ class ComputeFilter(filters.BaseHostFilter):
         capabilities = host_state.capabilities
         service = host_state.service
 
-        if not utils.service_is_up(service) or service['disabled']:
+        passes = self.servicegroup_api.service_is_up(service)
+        if not passes or service['disabled']:
             LOG.debug(_("%(host_state)s is disabled or has not been "
                     "heard from in a while"), locals())
             return False
