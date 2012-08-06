@@ -61,8 +61,7 @@ class API(object):
         return super(API, cls).__new__(cls)
 
     def join(self, member_id, group, service=None):
-        """
-        Add a new member to the ServiceGroup
+        """Add a new member to the ServiceGroup
 
         @param member_id: the joined member ID
         @param group: the group name, of the joined member
@@ -81,31 +80,27 @@ service = %(sr)s'), {'id': member_id, 'gr': group, 'sr': service})
         return self._driver.subscribe_to_changes(groups)
 
     def service_is_up(self, member_id):
-        """ Check if the given member is up"""
+        """Check if the given member is up"""
         LOG.debug(_('Check if the given member [%s] is part of the \
 ServiceGroup, is up'), member_id)
         return self._driver.is_up(member_id)
 
     def leave(self, context, member_id):
-        """
-        Explicitly remove the given member from the ServiceGroup monitoring
+        """Explicitly remove the given member from the ServiceGroup 
+        monitoring
         """
         LOG.debug(_('Explicitly remove the given member [%s] from the \
 ServiceGroup monitoring'), member_id)
         return self._driver.leave(member_id['host'], member_id['topic'])
 
     def get_all(self, group):
-        """
-        Returns ALL members of the given group
-        """
+        """Returns ALL members of the given group"""
         LOG.debug(_('Returns ALL members of the [%s] \
 ServiceGroup'), group)
         return self._driver.get_all(group)
 
     def get_random(self, group):
-        """
-        Returns random member of the given group
-        """
+        """Returns random member of the given group"""
         LOG.debug(_('Returns random member of the [%s] \
 group'), group)
         return self._driver.get_random(group)
@@ -119,9 +114,7 @@ class ServiceGroupDriver(object):
         raise NotImplementedError()
 
     def subscribe_to_changes(self, groups):
-        """
-        Subscribe to changes under given groups: no need in the db_backend
-        """
+        """Subscribe to changes under given groups"""
         raise NotImplementedError()
 
     def is_up(self, member_id):
@@ -129,21 +122,15 @@ class ServiceGroupDriver(object):
         raise NotImplementedError()
 
     def leave(self, host, group):
-        """ Remove the given member from the ServiceGroup monitoring
-        TODO implement in the subclases
-        """
+        """Remove the given member from the ServiceGroup monitoring"""
         raise NotImplementedError()
 
     def get_all(selfself, group):
-        """
-        Returns ALL members of the given group
-        """
+        """Returns ALL members of the given group"""
         raise NotImplementedError()
 
     def get_random(selfself, group):
-        """
-        Returns random member of the given group
-        """
+        """Returns random member of the given group"""
         members = get_all(self, group)
         if members is None:
             return None
