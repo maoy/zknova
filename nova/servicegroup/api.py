@@ -102,13 +102,12 @@ ServiceGroup'), group)
         """Returns one member of the given group. The strategy to select
         the member is decided by the driver (e.g. random or round-robin).
         """
-        LOG.debug(_('Returns random member of the [%s] \
-group'), group)
-        return self._driver.get_random(group)
+        LOG.debug(_('Returns one member of the [%s] group'), group)
+        return self._driver.get_one(group)
 
 
 class ServiceGroupDriver(object):
-    """Base class for ServiceGroup drivers. """
+    """Base class for ServiceGroup drivers."""
 
     _rnd = random.seed
 
