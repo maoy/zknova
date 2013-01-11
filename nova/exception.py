@@ -1120,3 +1120,8 @@ class CryptoCAFileNotFound(FileNotFound):
 
 class CryptoCRLFileNotFound(FileNotFound):
     message = _("The CRL file for %(project)s could not be found")
+
+
+class ServiceGroupUnavailable(NovaException):
+    message = _("The service from servicegroup driver %(driver) is "
+                "temporarily unavailable.")
